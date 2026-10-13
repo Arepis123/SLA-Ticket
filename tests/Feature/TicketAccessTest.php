@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\TicketStatus;
+use App\Livewire\Admin\Users;
 use App\Livewire\Tickets\Create;
 use App\Livewire\Tickets\Show;
 use App\Models\Project;
@@ -28,25 +29,90 @@ class TicketAccessTest extends TestCase
         Storage::fake('local');
     }
 
-    public function test_clients_only_see_their_own_company_tickets(): void
+    public function test_clients_only_see_the_tickets_they_reported(): void
     {
         $mine = Ticket::factory()->create();
+        $colleagues = Ticket::factory()->create(['project_id' => $mine->project_id]);
         $other = Ticket::factory()->create();
-        $client = User::factory()->client($mine->company)->create();
+        $client = $mine->reporter;
+
+        $this->assertSame($mine->company_id, $colleagues->company_id);
 
         $this->actingAs($client)->get(route('tickets.show', $mine))->assertOk();
+        $this->actingAs($client)->get(route('tickets.show', $colleagues))->assertForbidden();
         $this->actingAs($client)->get(route('tickets.show', $other))->assertForbidden();
 
         $this->actingAs($client)->get(route('tickets.index'))
+            ->assertSee('My Tickets')
             ->assertSee($mine->reference)
+            ->assertDontSee($colleagues->reference)
             ->assertDontSee($other->reference);
+
+        $this->actingAs($client)->get(route('dashboard'))->assertOk()->assertDontSee($colleagues->reference);
+
+        Livewire::actingAs($client)->test(Show::class, ['ticket' => $colleagues])->assertForbidden();
+    }
+
+    public function test_client_admins_see_every_ticket_of_their_company_only(): void
+    {
+        $mine = Ticket::factory()->create();
+        $colleagues = Ticket::factory()->create(['project_id' => $mine->project_id]);
+        $other = Ticket::factory()->create();
+        $clientAdmin = User::factory()->clientAdmin($mine->company)->create();
+
+        $this->actingAs($clientAdmin)->get(route('tickets.show', $mine))->assertOk();
+        $this->actingAs($clientAdmin)->get(route('tickets.show', $colleagues))->assertOk();
+        $this->actingAs($clientAdmin)->get(route('tickets.show', $other))->assertForbidden();
+
+        $this->actingAs($clientAdmin)->get(route('tickets.index'))
+            ->assertSee('Company Tickets')
+            ->assertSee($mine->reference)
+            ->assertSee($colleagues->reference)
+            ->assertSee($colleagues->reporter->name)
+            ->assertDontSee($other->reference);
+
+        Livewire::actingAs($clientAdmin)->test(Show::class, ['ticket' => $colleagues])
+            ->set('body', 'Following up for my colleague')
+            ->call('reply')
+            ->assertHasNoErrors();
+
+        $this->assertSame(1, $colleagues->comments()->count());
+
+        foreach (['admin.users', 'admin.reports'] as $route) {
+            $this->actingAs($clientAdmin)->get(route($route))->assertForbidden();
+        }
+    }
+
+    public function test_admin_can_make_a_client_user_a_client_admin(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $client = User::factory()->client()->create();
+
+        Livewire::actingAs($admin)->test(Users::class)
+            ->call('edit', $client->id)
+            ->assertSet('is_client_admin', false)
+            ->set('is_client_admin', true)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertTrue($client->fresh()->isClientAdmin());
+
+        // The flag only applies to clients: it is dropped when the role changes.
+        Livewire::actingAs($admin)->test(Users::class)
+            ->call('edit', $client->id)
+            ->assertSet('is_client_admin', true)
+            ->set('userRole', 'internal')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertFalse($client->fresh()->is_client_admin);
     }
 
     public function test_clients_cannot_open_admin_pages(): void
     {
         $client = User::factory()->client()->create();
 
-        foreach (['admin.companies', 'admin.projects', 'admin.users', 'admin.sla-policies'] as $route) {
+        foreach (['admin.companies', 'admin.projects', 'admin.users', 'admin.sla-policies', 'admin.reports'] as $route) {
             $this->actingAs($client)->get(route($route))->assertForbidden();
         }
     }

@@ -37,7 +37,7 @@
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('4. Following your tickets')">
-            <flux:text>{{ __('"My Tickets" lists every ticket reported by anyone in your company. Use the search box and the filters at the top to narrow the list, and click a column heading to sort.') }}</flux:text>
+            <flux:text>{{ __('"My Tickets" lists the tickets you reported. If you are your company\'s client admin, the page is called "Company Tickets" and lists every ticket reported by anyone in your company, with the reporter\'s name. Use the search box and the filters at the top to narrow the list, and click a column heading to sort.') }}</flux:text>
 
             <flux:heading class="mt-4 mb-2">{{ __('Ticket statuses') }}</flux:heading>
             @include('livewire.manual.partials.statuses')

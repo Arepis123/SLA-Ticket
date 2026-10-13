@@ -59,6 +59,11 @@ class UserFactory extends Factory
         ]);
     }
 
+    public function clientAdmin(?Company $company = null): static
+    {
+        return $this->client($company)->state(fn (array $attributes) => ['is_client_admin' => true]);
+    }
+
     public function inactive(): static
     {
         return $this->state(fn (array $attributes) => ['is_active' => false]);

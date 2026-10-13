@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-            <flux:heading size="xl" level="1">{{ auth()->user()->isClient() ? __('My Tickets') : __('Tickets') }}</flux:heading>
+            <flux:heading size="xl" level="1">{{ auth()->user()->isClientAdmin() ? __('Company Tickets') : (auth()->user()->isClient() ? __('My Tickets') : __('Tickets')) }}</flux:heading>
             <flux:text class="mt-1">{{ trans_choice(':count ticket|:count tickets', $this->tickets->total()) }}</flux:text>
         </div>
         @can('create', \App\Models\Ticket::class)
@@ -82,6 +82,9 @@
                             <flux:link :href="route('tickets.show', $ticket)" variant="ghost" class="block truncate font-medium" wire:navigate>{{ $ticket->title }}</flux:link>
                             <flux:text size="sm" class="truncate">
                                 {{ $ticket->project->name }}@can('staff') · {{ $ticket->company->name }}@endcan
+                                @if (auth()->user()->isClientAdmin())
+                                    · {{ $ticket->reporter->name }}
+                                @endif
                             </flux:text>
                         </flux:table.cell>
                         <flux:table.cell><x-ticket.priority-badge :priority="$ticket->priority" /></flux:table.cell>

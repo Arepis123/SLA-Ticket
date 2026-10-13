@@ -42,6 +42,8 @@ class Users extends Component
 
     public string $company_id = '';
 
+    public bool $is_client_admin = false;
+
     public string $password = '';
 
     public bool $is_active = true;
@@ -96,6 +98,7 @@ class Users extends Component
         $this->email = $user->email;
         $this->userRole = $user->role->value;
         $this->company_id = (string) $user->company_id;
+        $this->is_client_admin = $user->is_client_admin;
         $this->is_active = $user->is_active;
 
         Flux::modal('user-form')->show();
@@ -112,6 +115,7 @@ class Users extends Component
             'userRole' => ['required', Rule::enum(UserRole::class)],
             'company_id' => [Rule::requiredIf($isClient), 'nullable', 'exists:companies,id'],
             'password' => [$this->editingId || $this->sendResetLink ? 'nullable' : 'required', 'string', Password::default()],
+            'is_client_admin' => ['boolean'],
             'is_active' => ['boolean'],
         ], attributes: ['userRole' => __('role'), 'company_id' => __('client')]);
 
@@ -120,6 +124,7 @@ class Users extends Component
             'email' => strtolower($validated['email']),
             'role' => $isSelf ? UserRole::Admin : UserRole::from($validated['userRole']),
             'company_id' => $isClient ? (int) $validated['company_id'] : null,
+            'is_client_admin' => $isClient && $validated['is_client_admin'],
             'is_active' => $isSelf ? true : $validated['is_active'],
         ];
 
@@ -161,7 +166,7 @@ class Users extends Component
 
     protected function resetForm(): void
     {
-        $this->reset('editingId', 'name', 'email', 'userRole', 'company_id', 'password', 'is_active', 'sendResetLink');
+        $this->reset('editingId', 'name', 'email', 'userRole', 'company_id', 'is_client_admin', 'password', 'is_active', 'sendResetLink');
         $this->resetValidation();
     }
 }

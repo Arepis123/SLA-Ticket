@@ -11,7 +11,7 @@
                 <li><flux:text inline variant="strong">{{ __('Projects') }}</flux:text> — {{ __('add each system you built for that company.') }}</li>
                 <li><flux:text inline variant="strong">{{ __('Users') }}</flux:text> — {{ __('create a Client account for each person at the company who will report bugs.') }}</li>
             </x-manual.steps>
-            <flux:text>{{ __('A client user can only report bugs against, and see tickets for, their own company\'s systems.') }}</flux:text>
+            <flux:text>{{ __('A client user can only report bugs against their own company\'s systems, and only sees the tickets they reported unless you make them a client admin.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('2. Clients')">
@@ -53,13 +53,14 @@
                     <flux:table.row>
                         <flux:table.cell><flux:badge size="sm" :color="\App\Enums\UserRole::Client->color()">{{ \App\Enums\UserRole::Client->label() }}</flux:badge></flux:table.cell>
                         <flux:table.cell class="whitespace-normal">{{ __('People at a client company') }}</flux:table.cell>
-                        <flux:table.cell class="whitespace-normal">{{ __('Report bugs and follow tickets for their own company only. Cannot see internal notes.') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Report bugs and follow the tickets they reported. A client admin sees and can reply to every ticket of their company. Cannot see internal notes.') }}</flux:table.cell>
                     </flux:table.row>
                 </flux:table.rows>
             </flux:table>
 
             <x-manual.steps bullets class="mt-3">
                 <li>{{ __('Click "Add user". A Client user must be linked to a client company.') }}</li>
+                <li>{{ __('Switch on "Client admin" for the person at a client company who should see every ticket of that company. Other client users only see the tickets they reported themselves.') }}</li>
                 <li>{{ __('Either type a password for them, or tick "Email the user a link to set their own password".') }}</li>
                 <li>{{ __('"Send password reset link" in the "…" menu emails a reset link at any time.') }}</li>
                 <li>{{ __('"Deactivate" blocks sign-in and signs the user out on their next click. Their tickets and replies are kept.') }}</li>
@@ -90,7 +91,18 @@
             <flux:text>{{ __('Each ticket\'s Activity timeline keeps a permanent record of every status, priority and assignee change and every SLA event.') }}</flux:text>
         </flux:accordion.item>
 
-        <flux:accordion.item :heading="__('7. Keeping the system running')">
+        <flux:accordion.item :heading="__('7. Reports')">
+            <flux:text>{{ __('Reports shows SLA performance for the tickets opened in a period you choose. Only administrators can open it.') }}</flux:text>
+            <x-manual.steps bullets>
+                <li>{{ __('Pick a date range (or a preset such as "Last 30 Days"), and optionally one client or system.') }}</li>
+                <li>{{ __('The cards show tickets opened, resolved and breached, SLA compliance, and average first-response and resolution times.') }}</li>
+                <li>{{ __('The Breakdown tabs split the same figures by client, system, priority, assignee and category.') }}</li>
+                <li>{{ __('"Export" downloads the chosen filters either as a PDF report with the company logo in the header, or as a CSV with one row per ticket, ready for Excel.') }}</li>
+            </x-manual.steps>
+            <flux:text>{{ __('A ticket counts in the period it was opened in, even if it was resolved later.') }}</flux:text>
+        </flux:accordion.item>
+
+        <flux:accordion.item :heading="__('8. Keeping the system running')">
             <flux:text>{{ __('Two background processes must be running on the server, otherwise deadlines are not checked and emails are not sent:') }}</flux:text>
             <x-manual.steps bullets>
                 <li><flux:text inline variant="strong">{{ __('Scheduler') }}</flux:text> — {{ __('runs the SLA check every minute and auto-closes resolved tickets.') }}</li>

@@ -30,7 +30,7 @@
     {{-- Header --}}
     <div>
         <flux:breadcrumbs class="mb-2">
-            <flux:breadcrumbs.item :href="route('tickets.index')" wire:navigate>{{ $user->isClient() ? __('My Tickets') : __('Tickets') }}</flux:breadcrumbs.item>
+            <flux:breadcrumbs.item :href="route('tickets.index')" wire:navigate>{{ $user->isClientAdmin() ? __('Company Tickets') : ($user->isClient() ? __('My Tickets') : __('Tickets')) }}</flux:breadcrumbs.item>
             <flux:breadcrumbs.item>{{ $ticket->reference }}</flux:breadcrumbs.item>
         </flux:breadcrumbs>
 

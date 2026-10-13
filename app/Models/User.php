@@ -26,6 +26,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $email
  * @property UserRole $role
  * @property int|null $company_id
+ * @property bool $is_client_admin
  * @property bool $is_active
  * @property Carbon|null $email_verified_at
  * @property string $password
@@ -37,7 +38,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $updated_at
  * @property-read Company|null $company
  */
-#[Fillable(['name', 'email', 'password', 'role', 'company_id', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'role', 'company_id', 'is_client_admin', 'is_active'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
@@ -55,6 +56,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'is_client_admin' => 'boolean',
             'is_active' => 'boolean',
         ];
     }
@@ -96,6 +98,14 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function isClient(): bool
     {
         return $this->role === UserRole::Client;
+    }
+
+    /**
+     * A client who sees every ticket of their company, not only the ones they reported.
+     */
+    public function isClientAdmin(): bool
+    {
+        return $this->isClient() && $this->is_client_admin;
     }
 
     /**

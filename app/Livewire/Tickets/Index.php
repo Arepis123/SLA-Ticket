@@ -90,7 +90,7 @@ class Index extends Component
 
         return Ticket::query()
             ->visibleTo($user)
-            ->with(['project', 'company', 'assignee'])
+            ->with(['project', 'company', 'assignee', 'reporter'])
             ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('reference', 'like', "%{$this->search}%")
                 ->orWhere('title', 'like', "%{$this->search}%")))

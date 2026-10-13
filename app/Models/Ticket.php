@@ -162,7 +162,8 @@ class Ticket extends Model
     }
 
     /**
-     * Limit tickets to the ones the given user may see.
+     * Limit tickets to the ones the given user may see: staff see everything,
+     * client admins their whole company, other clients only their own reports.
      *
      * @param  Builder<Ticket>  $query
      */
@@ -171,6 +172,10 @@ class Ticket extends Model
     {
         if ($user->isClient()) {
             $query->where('company_id', $user->company_id ?? 0);
+
+            if (! $user->isClientAdmin()) {
+                $query->where('reporter_id', $user->id);
+            }
         }
     }
 

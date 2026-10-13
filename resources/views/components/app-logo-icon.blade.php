@@ -1,4 +1,4 @@
-{{-- Fixwatch mark: a wristwatch whose hands form a checkmark. --}}
+{{-- FixWatch mark: a wristwatch whose hands form a checkmark. --}}
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" {{ $attributes }}>
     <rect x="14" y="1" width="12" height="7" rx="2" fill="currentColor" />
     <rect x="14" y="32" width="12" height="7" rx="2" fill="currentColor" />

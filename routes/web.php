@@ -24,6 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::livewire('projects', Admin\Projects::class)->name('projects');
         Route::livewire('users', Admin\Users::class)->name('users');
         Route::livewire('sla-policies', Admin\SlaPolicies::class)->name('sla-policies');
+        Route::livewire('reports', Admin\Reports::class)->name('reports');
     });
 });
 

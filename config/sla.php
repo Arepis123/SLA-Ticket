@@ -36,6 +36,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Company
+    |--------------------------------------------------------------------------
+    |
+    | Name and logo (path inside the public folder) printed in the header of
+    | exported PDF reports.
+    |
+    */
+
+    'company' => [
+        'name' => env('SLA_COMPANY_NAME', 'Enigmatic Solutions'),
+        'logo' => env('SLA_COMPANY_LOGO', 'images/enigmatic-solutions-logo.png'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Attachments
     |--------------------------------------------------------------------------
     */

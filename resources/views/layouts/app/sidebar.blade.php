@@ -16,7 +16,7 @@
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="ticket" :href="route('tickets.index')" :current="request()->routeIs('tickets.index', 'tickets.show')" wire:navigate>
-                        {{ auth()->user()->isClient() ? __('My Tickets') : __('Tickets') }}
+                        {{ auth()->user()->isClientAdmin() ? __('Company Tickets') : (auth()->user()->isClient() ? __('My Tickets') : __('Tickets')) }}
                     </flux:sidebar.item>
                     @can('create', \App\Models\Ticket::class)
                         <flux:sidebar.item icon="plus-circle" :href="route('tickets.create')" :current="request()->routeIs('tickets.create')" wire:navigate>
@@ -38,6 +38,9 @@
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="clock" :href="route('admin.sla-policies')" :current="request()->routeIs('admin.sla-policies')" wire:navigate>
                             {{ __('SLA Policies') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="chart-bar" :href="route('admin.reports')" :current="request()->routeIs('admin.reports')" wire:navigate>
+                            {{ __('Reports') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endcan

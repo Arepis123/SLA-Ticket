@@ -2,7 +2,7 @@
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl" level="1">{{ __('Users') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Client accounts submit tickets. Internal accounts work on them. Only admins can manage settings.') }}</flux:text>
+            <flux:text class="mt-1">{{ __('Client accounts submit tickets and see their own; a client admin sees every ticket of their company. Internal accounts work on them. Only admins can manage settings.') }}</flux:text>
         </div>
         <flux:button variant="primary" icon="user-plus" wire:click="create">{{ __('Add user') }}</flux:button>
     </div>
@@ -44,7 +44,9 @@
                                 </div>
                             </div>
                         </flux:table.cell>
-                        <flux:table.cell><flux:badge size="sm" :color="$user->role->color()">{{ $user->role->label() }}</flux:badge></flux:table.cell>
+                        <flux:table.cell>
+                            <flux:badge size="sm" :color="$user->isClientAdmin() ? 'teal' : $user->role->color()">{{ $user->isClientAdmin() ? __('Client admin') : $user->role->label() }}</flux:badge>
+                        </flux:table.cell>
                         <flux:table.cell>{{ $user->company?->name ?? '—' }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$user->is_active ? 'green' : 'zinc'">{{ $user->is_active ? __('Active') : __('Inactive') }}</flux:badge>
@@ -97,6 +99,8 @@
                         <flux:select.option :value="$option->id">{{ $option->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
+
+                <flux:switch wire:model="is_client_admin" :label="__('Client admin')" :description="__('Sees and can reply to every ticket of their company, not only the ones they reported.')" />
             @endif
 
             @unless ($editingId)

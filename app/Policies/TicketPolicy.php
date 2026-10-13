@@ -16,7 +16,13 @@ class TicketPolicy
 
     public function view(User $user, Ticket $ticket): bool
     {
-        return $user->isStaff() || ($user->company_id !== null && $user->company_id === $ticket->company_id);
+        if ($user->isStaff()) {
+            return true;
+        }
+
+        return $user->company_id !== null
+            && $user->company_id === $ticket->company_id
+            && ($user->isClientAdmin() || $ticket->reporter_id === $user->id);
     }
 
     /**

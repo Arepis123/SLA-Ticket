@@ -6,6 +6,7 @@ use App\Enums\SlaState;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
+use App\Support\Duration;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -72,10 +73,10 @@ class Dashboard extends Component
             'awaiting_confirmation' => Ticket::query()->visibleTo(Auth::user())->where('status', TicketStatus::Resolved)->count(),
             'resolved_30d' => $resolved->count(),
             'compliance' => $resolved->isEmpty() ? null : round($met / $resolved->count() * 100),
-            'avg_response' => $responded->isEmpty() ? null : $this->humanMinutes(
+            'avg_response' => $responded->isEmpty() ? null : Duration::human(
                 $responded->avg(fn (Ticket $ticket) => $ticket->created_at->diffInMinutes($ticket->first_responded_at)),
             ),
-            'avg_resolution' => $resolved->isEmpty() ? null : $this->humanMinutes(
+            'avg_resolution' => $resolved->isEmpty() ? null : Duration::human(
                 $resolved->avg(fn (Ticket $ticket) => max(0, $ticket->created_at->diffInMinutes($ticket->resolved_at) - $ticket->paused_minutes)),
             ),
         ];
@@ -179,17 +180,6 @@ class Dashboard extends Component
             ->latest('updated_at')
             ->take(8)
             ->get();
-    }
-
-    protected function humanMinutes(float $minutes): string
-    {
-        $minutes = (int) round($minutes);
-
-        return match (true) {
-            $minutes < 60 => "{$minutes}m",
-            $minutes < 1440 => sprintf('%dh %dm', intdiv($minutes, 60), $minutes % 60),
-            default => sprintf('%dd %dh', intdiv($minutes, 1440), intdiv($minutes % 1440, 60)),
-        };
     }
 
     public function render(): View
