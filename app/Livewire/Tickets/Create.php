@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Services\TicketManager;
+use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
@@ -52,7 +53,7 @@ class Create extends Component
     }
 
     /**
-     * Active projects the user may report against.
+     * Active projects of the client's own company.
      *
      * @return Collection<int, Project>
      */
@@ -64,8 +65,7 @@ class Create extends Component
         return Project::query()
             ->where('is_active', true)
             ->whereHas('company', fn (Builder $query) => $query->where('is_active', true))
-            ->when($user->isClient(), fn (Builder $query) => $query->where('company_id', $user->company_id))
-            ->with('company')
+            ->where('company_id', $user->company_id)
             ->orderBy('name')
             ->get();
     }
@@ -111,7 +111,7 @@ class Create extends Component
 
         $ticket = $manager->create(Auth::user(), collect($validated)->except('attachments')->all(), $this->attachments);
 
-        session()->flash('notify', __('Ticket :ref submitted. We will respond shortly.', ['ref' => $ticket->reference]));
+        Flux::toast(variant: 'success', text: __('Ticket :ref submitted. We will respond shortly.', ['ref' => $ticket->reference]));
 
         $this->redirectRoute('tickets.show', $ticket, navigate: true);
     }

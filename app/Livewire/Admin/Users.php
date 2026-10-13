@@ -139,14 +139,14 @@ class Users extends Component
         }
 
         Flux::modal('user-form')->close();
-        $this->dispatch('notify', message: $this->editingId ? __('User updated.') : __('User created.'));
+        Flux::toast(variant: 'success', text: $this->editingId ? __('User updated.') : __('User created.'));
         $this->resetForm();
     }
 
     public function sendPasswordReset(User $user): void
     {
         PasswordBroker::sendResetLink(['email' => $user->email]);
-        $this->dispatch('notify', message: __('Password reset link sent to :email.', ['email' => $user->email]));
+        Flux::toast(variant: 'success', text: __('Password reset link sent to :email.', ['email' => $user->email]));
     }
 
     public function toggleActive(User $user): void
@@ -156,7 +156,7 @@ class Users extends Component
         }
 
         $user->update(['is_active' => ! $user->is_active]);
-        $this->dispatch('notify', message: $user->is_active ? __('User activated.') : __('User deactivated.'));
+        Flux::toast(variant: 'success', text: $user->is_active ? __('User activated.') : __('User deactivated.'));
     }
 
     protected function resetForm(): void

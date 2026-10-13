@@ -19,9 +19,12 @@ class TicketPolicy
         return $user->isStaff() || ($user->company_id !== null && $user->company_id === $ticket->company_id);
     }
 
+    /**
+     * Only clients report bugs; staff work on them.
+     */
     public function create(User $user): bool
     {
-        return $user->isStaff() || $user->company_id !== null;
+        return $user->isClient() && $user->company_id !== null;
     }
 
     /**

@@ -51,6 +51,21 @@ class TicketAccessTest extends TestCase
         }
     }
 
+    public function test_only_clients_can_report_a_bug(): void
+    {
+        $client = User::factory()->client()->create();
+        $this->actingAs($client)->get(route('tickets.create'))->assertOk();
+        $this->actingAs($client)->get(route('dashboard'))->assertSee(route('tickets.create'));
+
+        foreach ([User::factory()->admin()->create(), User::factory()->internal()->create()] as $staff) {
+            $this->actingAs($staff)->get(route('tickets.create'))->assertForbidden();
+            $this->actingAs($staff)->get(route('dashboard'))->assertOk()->assertDontSee(route('tickets.create'));
+            $this->actingAs($staff)->get(route('tickets.index'))->assertOk()->assertDontSee(route('tickets.create'));
+
+            Livewire::actingAs($staff)->test(Create::class)->assertForbidden();
+        }
+    }
+
     public function test_client_can_submit_a_ticket_with_attachment_for_own_system_only(): void
     {
         $project = Project::factory()->create();

@@ -106,10 +106,10 @@ class Dashboard extends Component
     public function byPriority(): array
     {
         $colors = [
-            'critical' => 'bg-red-500',
-            'high' => 'bg-orange-500',
-            'medium' => 'bg-yellow-400',
-            'low' => 'bg-zinc-400',
+            'critical' => 'red',
+            'high' => 'orange',
+            'medium' => 'yellow',
+            'low' => 'zinc',
         ];
 
         return collect(TicketPriority::cases())->map(fn (TicketPriority $priority) => [
@@ -131,7 +131,7 @@ class Dashboard extends Component
             ->map(fn (Collection $tickets) => [
                 'label' => $tickets->first()->project->name.(Auth::user()->isStaff() ? ' · '.$tickets->first()->company->name : ''),
                 'value' => $tickets->count(),
-                'color' => 'bg-sky-500',
+                'color' => 'sky',
                 'href' => route('tickets.index', ['status' => 'unresolved', 'project' => $tickets->first()->project_id]),
             ])
             ->sortByDesc('value')

@@ -9,7 +9,7 @@
 
     <div class="flex flex-wrap gap-3">
         <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Search systems…')" clearable class="max-w-sm" />
-        <flux:select wire:model.live="company" class="max-w-xs">
+        <flux:select variant="listbox" searchable wire:model.live="company" class="max-w-xs">
             <flux:select.option value="">{{ __('All clients') }}</flux:select.option>
             @foreach ($this->companies as $option)
                 <flux:select.option :value="$option->id">{{ $option->name }}</flux:select.option>
@@ -18,7 +18,7 @@
     </div>
 
     <flux:card class="p-0! overflow-hidden">
-        <flux:table :paginate="$this->projects" class="[&_th:first-child]:ps-4 [&_td:first-child]:ps-4">
+        <flux:table class="[&_th:first-child]:ps-4 [&_td:first-child]:ps-4">
             <flux:table.columns>
                 <flux:table.column>{{ __('System') }}</flux:table.column>
                 <flux:table.column>{{ __('Client') }}</flux:table.column>
@@ -31,23 +31,23 @@
                     <flux:table.row :key="$project->id">
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
-                                <span class="font-medium text-zinc-800 dark:text-white">{{ $project->name }}</span>
+                                <flux:heading>{{ $project->name }}</flux:heading>
                                 @if ($project->code)
                                     <flux:badge size="sm">{{ $project->code }}</flux:badge>
                                 @endif
                             </div>
                             @if ($project->url)
-                                <a href="{{ $project->url }}" target="_blank" rel="noopener" class="text-xs text-zinc-500 hover:underline">{{ $project->url }}</a>
+                                <flux:link :href="$project->url" variant="subtle" external class="text-xs">{{ $project->url }}</flux:link>
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>{{ $project->company->name }}</flux:table.cell>
                         <flux:table.cell align="center" class="tabular-nums">
-                            <a href="{{ route('tickets.index', ['project' => $project->id]) }}" wire:navigate class="hover:underline">{{ $project->open_tickets_count }} / {{ $project->tickets_count }}</a>
+                            <flux:link :href="route('tickets.index', ['project' => $project->id])" variant="ghost" wire:navigate>{{ $project->open_tickets_count }} / {{ $project->tickets_count }}</flux:link>
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$project->is_active ? 'green' : 'zinc'">{{ $project->is_active ? __('Active') : __('Inactive') }}</flux:badge>
                         </flux:table.cell>
-                        <flux:table.cell align="end">
+                        <flux:table.cell align="center">
                             <flux:dropdown position="bottom" align="end">
                                 <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" />
                                 <flux:menu>
@@ -65,13 +65,15 @@
                 @endforelse
             </flux:table.rows>
         </flux:table>
+
+        <flux:pagination :paginator="$this->projects" class="px-4 pb-3" />
     </flux:card>
 
     <flux:modal name="project-form" class="w-full max-w-lg">
         <form wire:submit="save" class="space-y-6">
             <flux:heading size="lg">{{ $editingId ? __('Edit system') : __('New system') }}</flux:heading>
 
-            <flux:select wire:model="company_id" :label="__('Client')" :placeholder="__('Choose client…')" required>
+            <flux:select variant="listbox" searchable wire:model="company_id" :label="__('Client')" :placeholder="__('Choose client…')" required>
                 @foreach ($this->companies as $option)
                     <flux:select.option :value="$option->id">{{ $option->name }}</flux:select.option>
                 @endforeach

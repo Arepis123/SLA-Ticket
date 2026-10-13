@@ -1,0 +1,131 @@
+<flux:callout icon="information-circle" class="mb-4">
+    <flux:callout.text>{{ __('Administrators can do everything in the Support team guide as well. This guide covers the extra Administration pages.') }}</flux:callout.text>
+</flux:callout>
+
+<flux:card>
+    <flux:accordion transition>
+        <flux:accordion.item :heading="__('1. Setting up a new client')" expanded>
+            <flux:text>{{ __('Do these in order, because each step depends on the one before:') }}</flux:text>
+            <x-manual.steps>
+                <li><flux:text inline variant="strong">{{ __('Clients') }}</flux:text> — {{ __('add the company.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Projects') }}</flux:text> — {{ __('add each system you built for that company.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Users') }}</flux:text> — {{ __('create a Client account for each person at the company who will report bugs.') }}</li>
+            </x-manual.steps>
+            <flux:text>{{ __('A client user can only report bugs against, and see tickets for, their own company\'s systems.') }}</flux:text>
+        </flux:accordion.item>
+
+        <flux:accordion.item :heading="__('2. Clients')">
+            <x-manual.steps bullets>
+                <li>{{ __('Click "Add client" and enter the company name and contact details.') }}</li>
+                <li>{{ __('Use the "…" menu on a row to edit it or jump to its systems. The Systems and Users counts are links too.') }}</li>
+                <li>{{ __('Switch a client to Inactive to stop new tickets: its systems disappear from the bug report form. Existing tickets are kept.') }}</li>
+                <li>{{ __('Delete is only allowed for a client that has no tickets. Otherwise deactivate it.') }}</li>
+            </x-manual.steps>
+        </flux:accordion.item>
+
+        <flux:accordion.item :heading="__('3. Projects (systems)')">
+            <x-manual.steps bullets>
+                <li>{{ __('Click "Add system", choose the client, and enter the system name. Code and URL are optional.') }}</li>
+                <li>{{ __('Inactive systems are hidden from the bug report form but keep their ticket history.') }}</li>
+                <li>{{ __('The "Open / total tickets" number links to that system\'s tickets.') }}</li>
+                <li>{{ __('A system with tickets cannot be deleted; deactivate it instead.') }}</li>
+            </x-manual.steps>
+        </flux:accordion.item>
+
+        <flux:accordion.item :heading="__('4. Users and roles')">
+            <flux:table>
+                <flux:table.columns>
+                    <flux:table.column>{{ __('Role') }}</flux:table.column>
+                    <flux:table.column>{{ __('Who it is for') }}</flux:table.column>
+                    <flux:table.column>{{ __('What they can do') }}</flux:table.column>
+                </flux:table.columns>
+                <flux:table.rows>
+                    <flux:table.row>
+                        <flux:table.cell><flux:badge size="sm" :color="\App\Enums\UserRole::Admin->color()">{{ \App\Enums\UserRole::Admin->label() }}</flux:badge></flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('You, the system owner') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Everything, including the Administration pages.') }}</flux:table.cell>
+                    </flux:table.row>
+                    <flux:table.row>
+                        <flux:table.cell><flux:badge size="sm" :color="\App\Enums\UserRole::Internal->color()">{{ \App\Enums\UserRole::Internal->label() }}</flux:badge></flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Your developers and support staff') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('See and work on all tickets from all clients. No Administration pages.') }}</flux:table.cell>
+                    </flux:table.row>
+                    <flux:table.row>
+                        <flux:table.cell><flux:badge size="sm" :color="\App\Enums\UserRole::Client->color()">{{ \App\Enums\UserRole::Client->label() }}</flux:badge></flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('People at a client company') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Report bugs and follow tickets for their own company only. Cannot see internal notes.') }}</flux:table.cell>
+                    </flux:table.row>
+                </flux:table.rows>
+            </flux:table>
+
+            <x-manual.steps bullets class="mt-3">
+                <li>{{ __('Click "Add user". A Client user must be linked to a client company.') }}</li>
+                <li>{{ __('Either type a password for them, or tick "Email the user a link to set their own password".') }}</li>
+                <li>{{ __('"Send password reset link" in the "…" menu emails a reset link at any time.') }}</li>
+                <li>{{ __('"Deactivate" blocks sign-in and signs the user out on their next click. Their tickets and replies are kept.') }}</li>
+                <li>{{ __('You cannot deactivate yourself or remove your own Admin role, so you cannot lock yourself out.') }}</li>
+            </x-manual.steps>
+        </flux:accordion.item>
+
+        <flux:accordion.item :heading="__('5. SLA Policies')">
+            <flux:text>{{ __('SLA Policies sets, for each priority, how many hours the team has to send a first response and to resolve the ticket. Current values:') }}</flux:text>
+            <div class="mt-2">
+                @include('livewire.manual.partials.sla-targets')
+            </div>
+            <x-manual.steps bullets class="mt-3">
+                <li>{{ __('Enter hours (decimals allowed, for example 0.5 for 30 minutes) and click "Save policies".') }}</li>
+                <li>{{ __('The resolution target must be at least as long as the response target.') }}</li>
+                <li>{{ __('New targets apply to tickets opened afterwards, and to a ticket whose priority is changed. Tickets that are already open keep their current deadlines.') }}</li>
+                <li>{{ __('The clock runs 24/7 and pauses while a ticket is Pending Client, Resolved or Closed.') }}</li>
+            </x-manual.steps>
+        </flux:accordion.item>
+
+        <flux:accordion.item :heading="__('6. Monitoring and alerts')">
+            <flux:text>{{ __('The SLA dashboard is your overview; see "Reading the SLA dashboard" in the Support team guide. In addition, every administrator is emailed when:') }}</flux:text>
+            <x-manual.steps bullets>
+                <li>{{ __('A client submits a new ticket.') }}</li>
+                <li>{{ __('A client replies to, confirms or reopens any ticket.') }}</li>
+                <li>{{ __('Any ticket becomes at risk (:pct% of its time used) or breaches its first-response or resolution target.', ['pct' => config('sla.at_risk_threshold')]) }}</li>
+            </x-manual.steps>
+            <flux:text>{{ __('Each ticket\'s Activity timeline keeps a permanent record of every status, priority and assignee change and every SLA event.') }}</flux:text>
+        </flux:accordion.item>
+
+        <flux:accordion.item :heading="__('7. Keeping the system running')">
+            <flux:text>{{ __('Two background processes must be running on the server, otherwise deadlines are not checked and emails are not sent:') }}</flux:text>
+            <x-manual.steps bullets>
+                <li><flux:text inline variant="strong">{{ __('Scheduler') }}</flux:text> — {{ __('runs the SLA check every minute and auto-closes resolved tickets.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Queue worker') }}</flux:text> — {{ __('sends the notification emails.') }}</li>
+            </x-manual.steps>
+            <flux:text>{{ __('These settings live in the server\'s .env file:') }}</flux:text>
+            <flux:table class="mt-2">
+                <flux:table.columns>
+                    <flux:table.column>{{ __('Setting') }}</flux:table.column>
+                    <flux:table.column>{{ __('What it controls') }}</flux:table.column>
+                    <flux:table.column>{{ __('Current value') }}</flux:table.column>
+                </flux:table.columns>
+                <flux:table.rows>
+                    <flux:table.row>
+                        <flux:table.cell class="font-mono">SLA_AT_RISK_THRESHOLD</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Percentage of time used before a ticket is flagged "at risk".') }}</flux:table.cell>
+                        <flux:table.cell variant="strong">{{ config('sla.at_risk_threshold') }}%</flux:table.cell>
+                    </flux:table.row>
+                    <flux:table.row>
+                        <flux:table.cell class="font-mono">SLA_AUTO_CLOSE_DAYS</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Days before an unconfirmed resolved ticket is closed. 0 turns this off.') }}</flux:table.cell>
+                        <flux:table.cell variant="strong">{{ config('sla.auto_close_days') }}</flux:table.cell>
+                    </flux:table.row>
+                    <flux:table.row>
+                        <flux:table.cell class="font-mono">SLA_REFERENCE_PREFIX</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Prefix of new ticket reference numbers.') }}</flux:table.cell>
+                        <flux:table.cell variant="strong">{{ config('sla.reference_prefix') }}</flux:table.cell>
+                    </flux:table.row>
+                    <flux:table.row>
+                        <flux:table.cell class="font-mono">MAIL_MAILER</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('How emails are sent. "log" only writes them to the log file and delivers nothing.') }}</flux:table.cell>
+                        <flux:table.cell variant="strong">{{ config('mail.default') }}</flux:table.cell>
+                    </flux:table.row>
+                </flux:table.rows>
+            </flux:table>
+        </flux:accordion.item>
+    </flux:accordion>
+</flux:card>

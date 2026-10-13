@@ -4,13 +4,15 @@
             <flux:heading size="xl" level="1">{{ auth()->user()->isClient() ? __('My Tickets') : __('Tickets') }}</flux:heading>
             <flux:text class="mt-1">{{ trans_choice(':count ticket|:count tickets', $this->tickets->total()) }}</flux:text>
         </div>
-        <flux:button variant="primary" icon="plus" :href="route('tickets.create')" wire:navigate>{{ __('New ticket') }}</flux:button>
+        @can('create', \App\Models\Ticket::class)
+            <flux:button variant="primary" icon="bug-ant" :href="route('tickets.create')" wire:navigate>{{ __('Report a bug') }}</flux:button>
+        @endcan
     </div>
 
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Search ref or title…')" clearable class="xl:col-span-2" />
 
-        <flux:select wire:model.live="status">
+        <flux:select variant="listbox" wire:model.live="status">
             <flux:select.option value="">{{ __('All statuses') }}</flux:select.option>
             <flux:select.option value="unresolved">{{ __('All unresolved') }}</flux:select.option>
             @foreach (\App\Enums\TicketStatus::cases() as $option)
@@ -18,28 +20,28 @@
             @endforeach
         </flux:select>
 
-        <flux:select wire:model.live="priority">
+        <flux:select variant="listbox" wire:model.live="priority">
             <flux:select.option value="">{{ __('All priorities') }}</flux:select.option>
             @foreach (\App\Enums\TicketPriority::cases() as $option)
                 <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
             @endforeach
         </flux:select>
 
-        <flux:select wire:model.live="project">
+        <flux:select variant="listbox" searchable wire:model.live="project">
             <flux:select.option value="">{{ __('All systems') }}</flux:select.option>
             @foreach ($this->projects as $option)
                 <flux:select.option :value="$option->id">{{ $option->name }}{{ auth()->user()->isStaff() ? ' — '.$option->company->name : '' }}</flux:select.option>
             @endforeach
         </flux:select>
 
-        <flux:select wire:model.live="sla">
+        <flux:select variant="listbox" wire:model.live="sla">
             <flux:select.option value="">{{ __('Any SLA state') }}</flux:select.option>
             <flux:select.option value="breached">{{ __('Breached') }}</flux:select.option>
             <flux:select.option value="at_risk">{{ __('At risk') }}</flux:select.option>
         </flux:select>
 
         @can('staff')
-            <flux:select wire:model.live="assignee">
+            <flux:select variant="listbox" searchable wire:model.live="assignee">
                 <flux:select.option value="">{{ __('Anyone') }}</flux:select.option>
                 <flux:select.option value="me">{{ __('Assigned to me') }}</flux:select.option>
                 <flux:select.option value="none">{{ __('Unassigned') }}</flux:select.option>
@@ -57,7 +59,7 @@
     </div>
 
     <flux:card class="p-0! overflow-hidden">
-        <flux:table :paginate="$this->tickets" class="[&_th:first-child]:ps-4 [&_td:first-child]:ps-4">
+        <flux:table class="[&_th:first-child]:ps-4 [&_td:first-child]:ps-4">
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sort === 'reference'" :direction="$direction" wire:click="sortBy('reference')">{{ __('Ref') }}</flux:table.column>
                 <flux:table.column sortable :sorted="$sort === 'title'" :direction="$direction" wire:click="sortBy('title')">{{ __('Issue') }}</flux:table.column>
@@ -74,10 +76,10 @@
                 @forelse ($this->tickets as $ticket)
                     <flux:table.row :key="$ticket->id">
                         <flux:table.cell class="whitespace-nowrap font-mono text-xs">
-                            <a href="{{ route('tickets.show', $ticket) }}" wire:navigate class="hover:underline">{{ $ticket->reference }}</a>
+                            <flux:link :href="route('tickets.show', $ticket)" variant="subtle" wire:navigate>{{ $ticket->reference }}</flux:link>
                         </flux:table.cell>
                         <flux:table.cell class="max-w-96">
-                            <a href="{{ route('tickets.show', $ticket) }}" wire:navigate class="block truncate font-medium text-zinc-800 hover:underline dark:text-white">{{ $ticket->title }}</a>
+                            <flux:link :href="route('tickets.show', $ticket)" variant="ghost" class="block truncate font-medium" wire:navigate>{{ $ticket->title }}</flux:link>
                             <flux:text size="sm" class="truncate">
                                 {{ $ticket->project->name }}@can('staff') · {{ $ticket->company->name }}@endcan
                             </flux:text>
@@ -89,7 +91,7 @@
                                 @if ($ticket->assignee)
                                     <div class="flex items-center gap-2">
                                         <flux:avatar size="xs" :name="$ticket->assignee->name" :initials="$ticket->assignee->initials()" />
-                                        <span class="text-sm">{{ $ticket->assignee->name }}</span>
+                                        <flux:text>{{ $ticket->assignee->name }}</flux:text>
                                     </div>
                                 @else
                                     <flux:text size="sm" class="italic">{{ __('Unassigned') }}</flux:text>
@@ -109,5 +111,7 @@
                 @endforelse
             </flux:table.rows>
         </flux:table>
+
+        <flux:pagination :paginator="$this->tickets" class="px-4 pb-3" />
     </flux:card>
 </div>

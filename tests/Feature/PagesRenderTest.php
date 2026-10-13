@@ -31,7 +31,7 @@ class PagesRenderTest extends TestCase
         $manager->comment($ticket, $admin, 'We are on it');
         $manager->changeStatus($ticket, TicketStatus::PendingClient, $admin);
 
-        foreach (['dashboard', 'tickets.index', 'tickets.create', 'admin.companies', 'admin.projects', 'admin.users', 'admin.sla-policies'] as $route) {
+        foreach (['dashboard', 'tickets.index', 'admin.companies', 'admin.projects', 'admin.users', 'admin.sla-policies'] as $route) {
             $this->actingAs($admin)->get(route($route))->assertOk();
         }
 

@@ -3,6 +3,7 @@
 use App\Http\Controllers\TicketAttachmentController;
 use App\Livewire\Admin;
 use App\Livewire\Dashboard;
+use App\Livewire\Manual;
 use App\Livewire\Tickets;
 use Illuminate\Support\Facades\Route;
 
@@ -15,6 +16,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('tickets/create', Tickets\Create::class)->name('tickets.create');
     Route::livewire('tickets/{ticket}', Tickets\Show::class)->name('tickets.show');
     Route::get('tickets/{ticket}/attachments/{attachment}', TicketAttachmentController::class)->name('tickets.attachments.show');
+
+    Route::livewire('manual', Manual::class)->name('manual');
 
     Route::middleware('can:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::livewire('companies', Admin\Companies::class)->name('companies');

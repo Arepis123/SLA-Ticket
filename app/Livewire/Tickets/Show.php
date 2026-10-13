@@ -10,6 +10,7 @@ use App\Models\TicketAttachment;
 use App\Models\TicketComment;
 use App\Models\User;
 use App\Services\TicketManager;
+use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -177,7 +178,7 @@ class Show extends Component
 
     protected function notify(string $message): void
     {
-        $this->dispatch('notify', message: $message);
+        Flux::toast(variant: 'success', text: $message);
     }
 
     /**

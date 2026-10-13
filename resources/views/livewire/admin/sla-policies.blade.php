@@ -28,7 +28,7 @@
                                 <flux:input type="number" step="0.25" min="0.25" wire:model.live.debounce.500ms="targets.{{ $priority->value }}.resolution" class="max-w-32" />
                                 <flux:error name="targets.{{ $priority->value }}.resolution" />
                             </flux:table.cell>
-                            <flux:table.cell class="whitespace-nowrap text-sm text-zinc-500">
+                            <flux:table.cell class="whitespace-nowrap">
                                 {{ \App\Models\SlaPolicy::formatMinutes((int) round((float) $targets[$priority->value]['response'] * 60)) }}
                                 /
                                 {{ \App\Models\SlaPolicy::formatMinutes((int) round((float) $targets[$priority->value]['resolution'] * 60)) }}

@@ -106,20 +106,20 @@ class Projects extends Component
         Project::updateOrCreate(['id' => $this->editingId], $validated);
 
         Flux::modal('project-form')->close();
-        $this->dispatch('notify', message: $this->editingId ? __('System updated.') : __('System created.'));
+        Flux::toast(variant: 'success', text: $this->editingId ? __('System updated.') : __('System created.'));
         $this->resetForm();
     }
 
     public function delete(Project $project): void
     {
         if ($project->tickets()->exists()) {
-            $this->dispatch('notify', message: __('This system has tickets. Deactivate it instead.'), variant: 'danger');
+            Flux::toast(variant: 'danger', text: __('This system has tickets. Deactivate it instead.'));
 
             return;
         }
 
         $project->delete();
-        $this->dispatch('notify', message: __('System deleted.'));
+        Flux::toast(variant: 'success', text: __('System deleted.'));
     }
 
     protected function resetForm(): void

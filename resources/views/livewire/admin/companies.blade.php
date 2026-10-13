@@ -10,7 +10,7 @@
     <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Search clients…')" clearable class="max-w-sm" />
 
     <flux:card class="p-0! overflow-hidden">
-        <flux:table :paginate="$this->companies" class="[&_th:first-child]:ps-4 [&_td:first-child]:ps-4">
+        <flux:table class="[&_th:first-child]:ps-4 [&_td:first-child]:ps-4">
             <flux:table.columns>
                 <flux:table.column>{{ __('Client') }}</flux:table.column>
                 <flux:table.column>{{ __('Contact') }}</flux:table.column>
@@ -23,22 +23,22 @@
             <flux:table.rows>
                 @forelse ($this->companies as $company)
                     <flux:table.row :key="$company->id">
-                        <flux:table.cell class="font-medium text-zinc-800 dark:text-white">{{ $company->name }}</flux:table.cell>
+                        <flux:table.cell variant="strong">{{ $company->name }}</flux:table.cell>
                         <flux:table.cell>
-                            <div class="text-sm">{{ $company->contact_person ?: '—' }}</div>
+                            <flux:text variant="strong">{{ $company->contact_person ?: '—' }}</flux:text>
                             <flux:text size="sm">{{ $company->email }}{{ $company->email && $company->phone ? ' · ' : '' }}{{ $company->phone }}</flux:text>
                         </flux:table.cell>
                         <flux:table.cell align="center">
-                            <a href="{{ route('admin.projects', ['company' => $company->id]) }}" wire:navigate class="hover:underline">{{ $company->projects_count }}</a>
+                            <flux:link :href="route('admin.projects', ['company' => $company->id])" variant="ghost" wire:navigate>{{ $company->projects_count }}</flux:link>
                         </flux:table.cell>
                         <flux:table.cell align="center">
-                            <a href="{{ route('admin.users', ['company' => $company->id]) }}" wire:navigate class="hover:underline">{{ $company->users_count }}</a>
+                            <flux:link :href="route('admin.users', ['company' => $company->id])" variant="ghost" wire:navigate>{{ $company->users_count }}</flux:link>
                         </flux:table.cell>
                         <flux:table.cell align="center" class="tabular-nums">{{ $company->open_tickets_count }} / {{ $company->tickets_count }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$company->is_active ? 'green' : 'zinc'">{{ $company->is_active ? __('Active') : __('Inactive') }}</flux:badge>
                         </flux:table.cell>
-                        <flux:table.cell align="end">
+                        <flux:table.cell align="center">
                             <flux:dropdown position="bottom" align="end">
                                 <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" />
                                 <flux:menu>
@@ -57,6 +57,8 @@
                 @endforelse
             </flux:table.rows>
         </flux:table>
+
+        <flux:pagination :paginator="$this->companies" class="px-4 pb-3" />
     </flux:card>
 
     <flux:modal name="company-form" class="w-full max-w-lg">

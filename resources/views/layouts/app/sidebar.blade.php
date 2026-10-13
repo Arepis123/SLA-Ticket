@@ -18,9 +18,11 @@
                     <flux:sidebar.item icon="ticket" :href="route('tickets.index')" :current="request()->routeIs('tickets.index', 'tickets.show')" wire:navigate>
                         {{ auth()->user()->isClient() ? __('My Tickets') : __('Tickets') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="plus-circle" :href="route('tickets.create')" :current="request()->routeIs('tickets.create')" wire:navigate>
-                        {{ __('Report a Bug') }}
-                    </flux:sidebar.item>
+                    @can('create', \App\Models\Ticket::class)
+                        <flux:sidebar.item icon="plus-circle" :href="route('tickets.create')" :current="request()->routeIs('tickets.create')" wire:navigate>
+                            {{ __('Report a Bug') }}
+                        </flux:sidebar.item>
+                    @endcan
                 </flux:sidebar.group>
 
                 @can('admin')
@@ -42,6 +44,12 @@
             </flux:sidebar.nav>
 
             <flux:spacer />
+
+            <flux:sidebar.nav>
+                <flux:sidebar.item icon="book-open-text" :href="route('manual')" :current="request()->routeIs('manual')" wire:navigate>
+                    {{ __('User Manual') }}
+                </flux:sidebar.item>
+            </flux:sidebar.nav>
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>
@@ -108,27 +116,6 @@
                 <flux:toast />
             </flux:toast.group>
         @endpersist
-
-        {{-- Lightweight notice: Livewire components dispatch('notify', message: '...') or flash session('notify'). --}}
-        <div
-            x-data="{ show: false, message: '', variant: 'success', timer: null,
-                open(detail) { this.message = detail.message; this.variant = detail.variant ?? 'success'; this.show = true; clearTimeout(this.timer); this.timer = setTimeout(() => this.show = false, 4000) } }"
-            x-init="@if (session('notify')) $nextTick(() => open({ message: @js(session('notify')) })) @endif"
-            x-on:notify.window="open($event.detail)"
-            x-show="show"
-            x-transition.opacity
-            x-cloak
-            class="fixed bottom-4 end-4 z-50 w-80"
-        >
-            <div class="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:icon x-show="variant === 'success'" name="check-circle" class="size-5 shrink-0 text-green-500" />
-                <flux:icon x-show="variant === 'danger'" name="exclamation-circle" class="size-5 shrink-0 text-red-500" />
-                <flux:text class="flex-1 text-zinc-800! dark:text-white!" x-text="message"></flux:text>
-                <button type="button" x-on:click="show = false" class="text-zinc-400 hover:text-zinc-600">
-                    <flux:icon name="x-mark" variant="micro" />
-                </button>
-            </div>
-        </div>
 
         @fluxScripts
     </body>

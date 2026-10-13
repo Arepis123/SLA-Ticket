@@ -27,11 +27,62 @@
         </flux:callout>
     @endif
 
+    @php
+        $stats = $this->stats;
+
+        $cards = [
+            [
+                'label' => __('Open tickets'),
+                'value' => $stats['open'],
+                'icon' => 'inbox-stack',
+                'color' => 'sky',
+                'href' => route('tickets.index', ['status' => 'unresolved']),
+            ],
+            [
+                'label' => __('Waiting for your reply'),
+                'value' => $stats['pending_client'],
+                'icon' => 'chat-bubble-left-ellipsis',
+                'color' => 'orange',
+                'href' => route('tickets.index', ['status' => 'pending_client']),
+            ],
+            [
+                'label' => __('Fixed in last 30 days'),
+                'value' => $stats['resolved_30d'],
+                'icon' => 'check-circle',
+                'color' => 'green',
+            ],
+            [
+                'label' => __('Resolved within SLA'),
+                'value' => $stats['compliance'] !== null ? $stats['compliance'].'%' : '—',
+                'icon' => 'shield-check',
+            ],
+        ];
+    @endphp
+
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <x-stat-card :label="__('Open tickets')" :value="$this->stats['open']" icon="inbox-stack" color="sky" :href="route('tickets.index', ['status' => 'unresolved'])" />
-        <x-stat-card :label="__('Waiting for your reply')" :value="$this->stats['pending_client']" icon="chat-bubble-left-ellipsis" color="orange" :href="route('tickets.index', ['status' => 'pending_client'])" />
-        <x-stat-card :label="__('Fixed in last 30 days')" :value="$this->stats['resolved_30d']" icon="check-circle" color="green" />
-        <x-stat-card :label="__('Resolved within SLA')" :value="$this->stats['compliance'] !== null ? $this->stats['compliance'].'%' : '—'" icon="shield-check" />
+        @foreach ($cards as $card)
+            <flux:card size="sm" wire:key="stat-{{ $card['icon'] }}" class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <flux:text size="sm" class="truncate">{{ $card['label'] }}</flux:text>
+
+                    <div class="flex flex-wrap items-baseline gap-x-2">
+                        <flux:heading size="lg" class="tabular-nums">
+                            @isset($card['href'])
+                                <flux:link :href="$card['href']" variant="ghost" wire:navigate>{{ $card['value'] }}</flux:link>
+                            @else
+                                {{ $card['value'] }}
+                            @endisset
+                        </flux:heading>
+
+                        @isset($card['hint'])
+                            <flux:text size="sm" class="truncate">{{ $card['hint'] }}</flux:text>
+                        @endisset
+                    </div>
+                </div>
+
+                <flux:avatar size="sm" :icon="$card['icon']" icon:variant="outline" :color="$card['color'] ?? null" />
+            </flux:card>
+        @endforeach
     </div>
 
     <flux:card>
@@ -58,7 +109,7 @@
                     @foreach ($this->recentTickets as $ticket)
                         <flux:table.row :key="$ticket->id">
                             <flux:table.cell class="max-w-80">
-                                <a href="{{ route('tickets.show', $ticket) }}" wire:navigate class="block truncate font-medium text-zinc-800 hover:underline dark:text-white">{{ $ticket->title }}</a>
+                                <flux:link :href="route('tickets.show', $ticket)" variant="ghost" class="block truncate font-medium" wire:navigate>{{ $ticket->title }}</flux:link>
                                 <flux:text size="sm">{{ $ticket->reference }} · {{ $ticket->project->name }}</flux:text>
                             </flux:table.cell>
                             <flux:table.cell><x-ticket.priority-badge :priority="$ticket->priority" /></flux:table.cell>

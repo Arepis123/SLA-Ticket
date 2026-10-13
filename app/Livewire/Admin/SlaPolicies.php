@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Enums\TicketPriority;
 use App\Models\SlaPolicy;
+use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -49,6 +50,6 @@ class SlaPolicies extends Component
             ]);
         }
 
-        $this->dispatch('notify', message: __('SLA policies saved. New targets apply to new tickets and priority changes.'));
+        Flux::toast(variant: 'success', text: __('SLA policies saved. New targets apply to new tickets and priority changes.'));
     }
 }

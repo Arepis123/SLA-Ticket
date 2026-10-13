@@ -9,13 +9,13 @@
 
     <div class="flex flex-wrap gap-3">
         <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Search name or email…')" clearable class="max-w-sm" />
-        <flux:select wire:model.live="role" class="max-w-44">
+        <flux:select variant="listbox" wire:model.live="role" class="max-w-44">
             <flux:select.option value="">{{ __('All roles') }}</flux:select.option>
             @foreach (\App\Enums\UserRole::cases() as $option)
                 <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
             @endforeach
         </flux:select>
-        <flux:select wire:model.live="company" class="max-w-xs">
+        <flux:select variant="listbox" searchable wire:model.live="company" class="max-w-xs">
             <flux:select.option value="">{{ __('All clients') }}</flux:select.option>
             @foreach ($this->companies as $option)
                 <flux:select.option :value="$option->id">{{ $option->name }}</flux:select.option>
@@ -24,7 +24,7 @@
     </div>
 
     <flux:card class="p-0! overflow-hidden">
-        <flux:table :paginate="$this->users" class="[&_th:first-child]:ps-4 [&_td:first-child]:ps-4">
+        <flux:table class="[&_th:first-child]:ps-4 [&_td:first-child]:ps-4">
             <flux:table.columns>
                 <flux:table.column>{{ __('Name') }}</flux:table.column>
                 <flux:table.column>{{ __('Role') }}</flux:table.column>
@@ -39,7 +39,7 @@
                             <div class="flex items-center gap-3">
                                 <flux:avatar size="sm" :name="$user->name" :initials="$user->initials()" />
                                 <div>
-                                    <div class="font-medium text-zinc-800 dark:text-white">{{ $user->name }}</div>
+                                    <flux:heading>{{ $user->name }}</flux:heading>
                                     <flux:text size="sm">{{ $user->email }}</flux:text>
                                 </div>
                             </div>
@@ -49,7 +49,7 @@
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$user->is_active ? 'green' : 'zinc'">{{ $user->is_active ? __('Active') : __('Inactive') }}</flux:badge>
                         </flux:table.cell>
-                        <flux:table.cell align="end">
+                        <flux:table.cell align="center">
                             <flux:dropdown position="bottom" align="end">
                                 <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" />
                                 <flux:menu>
@@ -72,6 +72,8 @@
                 @endforelse
             </flux:table.rows>
         </flux:table>
+
+        <flux:pagination :paginator="$this->users" class="px-4 pb-3" />
     </flux:card>
 
     <flux:modal name="user-form" class="w-full max-w-lg">
@@ -90,7 +92,7 @@
             @endif
 
             @if ($userRole === 'client')
-                <flux:select wire:model="company_id" :label="__('Client company')" :placeholder="__('Choose client…')" required>
+                <flux:select variant="listbox" searchable wire:model="company_id" :label="__('Client company')" :placeholder="__('Choose client…')" required>
                     @foreach ($this->companies as $option)
                         <flux:select.option :value="$option->id">{{ $option->name }}</flux:select.option>
                     @endforeach

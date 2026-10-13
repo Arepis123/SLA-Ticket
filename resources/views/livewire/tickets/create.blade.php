@@ -16,22 +16,22 @@
     @else
         <form wire:submit="save" class="flex flex-col gap-6">
             <flux:card class="space-y-6">
-                <flux:select wire:model="project_id" :label="__('Which system has the problem?')" :placeholder="__('Choose a system…')" required>
+                <flux:select variant="listbox" searchable wire:model="project_id" :label="__('Which system has the problem?')" :placeholder="__('Choose a system…')" required>
                     @foreach ($this->projects as $project)
-                        <flux:select.option :value="$project->id">{{ $project->name }}{{ auth()->user()->isStaff() ? ' — '.$project->company->name : '' }}</flux:select.option>
+                        <flux:select.option :value="$project->id">{{ $project->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
 
                 <flux:input wire:model="title" :label="__('Summary')" :placeholder="__('e.g. Invoice PDF shows wrong total')" required maxlength="200" />
 
                 <div class="grid gap-6 sm:grid-cols-2">
-                    <flux:select wire:model="category" :label="__('Type of issue')">
+                    <flux:select variant="listbox" wire:model="category" :label="__('Type of issue')">
                         @foreach (\App\Enums\TicketCategory::cases() as $option)
                             <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
                         @endforeach
                     </flux:select>
 
-                    <flux:select wire:model="environment" :label="__('Environment')">
+                    <flux:select variant="listbox" wire:model="environment" :label="__('Environment')">
                         @foreach (\App\Enums\TicketEnvironment::cases() as $option)
                             <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
                         @endforeach
@@ -56,27 +56,30 @@
                 <flux:textarea wire:model="steps_to_reproduce" :label="__('Steps to reproduce')" :badge="__('Optional')" :placeholder="implode(PHP_EOL, ['1. Go to …', '2. Click …', '3. See error'])" rows="4" />
 
                 <div class="space-y-3">
-                    <flux:input type="file" wire:model="attachments" multiple :label="__('Screenshots or files')" :badge="__('Optional')"
-                        :description="__('Up to 5 files, max 10 MB each. Images, PDF, logs, Office documents, ZIP or video.')" />
+                    <flux:file-upload wire:model="attachments" multiple :label="__('Screenshots or files')" :badge="__('Optional')">
+                        <flux:file-upload.dropzone
+                            :heading="__('Drop files here or click to browse')"
+                            :text="__('Up to 5 files, max 10 MB each. Images, PDF, logs, Office documents, ZIP or video.')"
+                            with-progress
+                            inline
+                        />
+                    </flux:file-upload>
 
-                    <div wire:loading wire:target="attachments">
-                        <flux:text size="sm">{{ __('Uploading…') }}</flux:text>
-                    </div>
+                    @foreach ($attachments as $index => $file)
+                        <flux:file-item
+                            wire:key="upload-{{ $index }}"
+                            :heading="$file->getClientOriginalName()"
+                            :image="$file->isPreviewable() ? $file->temporaryUrl() : null"
+                            :size="$file->getSize()"
+                            :invalid="$errors->has('attachments.'.$index)"
+                        >
+                            <x-slot name="actions">
+                                <flux:file-item.remove wire:click="removeAttachment({{ $index }})" :aria-label="__('Remove file')" />
+                            </x-slot>
+                        </flux:file-item>
+                    @endforeach
 
-                    @if ($attachments)
-                        <ul class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
-                            @foreach ($attachments as $index => $file)
-                                <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm" wire:key="upload-{{ $index }}">
-                                    <span class="flex min-w-0 items-center gap-2">
-                                        <flux:icon name="paper-clip" variant="micro" class="shrink-0 text-zinc-400" />
-                                        <span class="truncate">{{ $file->getClientOriginalName() }}</span>
-                                    </span>
-                                    <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="removeAttachment({{ $index }})" :aria-label="__('Remove')" />
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-
+                    <flux:error name="attachments" />
                     <flux:error name="attachments.*" />
                 </div>
             </flux:card>

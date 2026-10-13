@@ -81,20 +81,20 @@ class Companies extends Component
         Company::updateOrCreate(['id' => $this->editingId], $validated);
 
         Flux::modal('company-form')->close();
-        $this->dispatch('notify', message: $this->editingId ? __('Client updated.') : __('Client created.'));
+        Flux::toast(variant: 'success', text: $this->editingId ? __('Client updated.') : __('Client created.'));
         $this->resetForm();
     }
 
     public function delete(Company $company): void
     {
         if ($company->tickets()->exists()) {
-            $this->dispatch('notify', message: __('This client has tickets. Deactivate it instead.'), variant: 'danger');
+            Flux::toast(variant: 'danger', text: __('This client has tickets. Deactivate it instead.'));
 
             return;
         }
 
         $company->delete();
-        $this->dispatch('notify', message: __('Client deleted.'));
+        Flux::toast(variant: 'success', text: __('Client deleted.'));
     }
 
     protected function resetForm(): void
