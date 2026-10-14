@@ -17,3 +17,10 @@ Artisan::command('sla:check', function (TicketManager $manager) {
 })->purpose('Flag SLA breaches and at-risk tickets, and auto-close stale resolved tickets');
 
 Schedule::command('sla:check')->everyMinute()->withoutOverlapping();
+
+// Notifications are queued, and shared hosting gives us no way to keep a
+// `queue:work` daemon alive. Draining the queue from the scheduler instead
+// means the single `schedule:run` cron entry is all the server needs.
+Schedule::command('queue:work --stop-when-empty --max-time=50')
+    ->everyMinute()
+    ->withoutOverlapping();
