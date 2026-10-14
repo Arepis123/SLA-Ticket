@@ -28,6 +28,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Cron token
+    |--------------------------------------------------------------------------
+    |
+    | Shared secret for public/cron.php, which runs the scheduled SLA work on
+    | hosts that cannot run `artisan schedule:run` from cron. Leave this empty
+    | to refuse all HTTP access to that script.
+    |
+    */
+
+    'cron_token' => env('SLA_CRON_TOKEN'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Ticket reference prefix
     |--------------------------------------------------------------------------
     */
