@@ -162,6 +162,49 @@ class Ticket extends Model
     }
 
     /**
+     * @return HasMany<TicketWorkLog, $this>
+     */
+    public function workLogs(): HasMany
+    {
+        return $this->hasMany(TicketWorkLog::class);
+    }
+
+    /**
+     * @return HasMany<TicketWorkLogRead, $this>
+     */
+    public function workLogReads(): HasMany
+    {
+        return $this->hasMany(TicketWorkLogRead::class);
+    }
+
+    /**
+     * Work log entries written by someone else since the given user last opened
+     * the work log tab. Their own entries never count as unread.
+     */
+    public function unreadWorkLogCountFor(User $user): int
+    {
+        $lastReadAt = $this->workLogReads()
+            ->where('user_id', $user->id)
+            ->value('last_read_at');
+
+        return $this->workLogs()
+            ->where('user_id', '!=', $user->id)
+            ->when($lastReadAt, fn (Builder $query) => $query->where('created_at', '>', $lastReadAt))
+            ->count();
+    }
+
+    /**
+     * Remember that the given user has now seen the work log up to this moment.
+     */
+    public function markWorkLogReadBy(User $user): void
+    {
+        $this->workLogReads()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['last_read_at' => now()],
+        );
+    }
+
+    /**
      * Limit tickets to the ones the given user may see: staff see everything,
      * client admins their whole company, other clients only their own reports.
      *

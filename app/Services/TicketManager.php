@@ -6,12 +6,15 @@ use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Models\TicketComment;
+use App\Models\TicketWorkLog;
 use App\Models\User;
 use App\Notifications\NewTicketComment;
+use App\Notifications\NewTicketWorkLog;
 use App\Notifications\SlaAlert;
 use App\Notifications\TicketAssigned;
 use App\Notifications\TicketCreated;
 use App\Notifications\TicketStatusChanged;
+use App\Support\HtmlSanitizer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -179,6 +182,33 @@ class TicketManager
         }
 
         return $comment;
+    }
+
+    /**
+     * Log work done on a ticket. Visible to everyone who can view the ticket.
+     * The body is rich text; it is sanitized here since it is later rendered unescaped.
+     */
+    public function logWork(Ticket $ticket, User $author, string $body): TicketWorkLog
+    {
+        $body = HtmlSanitizer::clean($body);
+
+        $workLog = DB::transaction(function () use ($ticket, $author, $body) {
+            $workLog = $ticket->workLogs()->create([
+                'user_id' => $author->id,
+                'body' => $body,
+            ]);
+
+            $ticket->touch();
+
+            return $workLog;
+        });
+
+        Notification::send(
+            collect([$ticket->reporter])->reject(fn (User $user) => $user->id === $author->id),
+            new NewTicketWorkLog($workLog),
+        );
+
+        return $workLog;
     }
 
     /**

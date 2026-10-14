@@ -105,14 +105,36 @@
                 @endif
             </flux:card>
 
-            {{-- Timeline --}}
-            <div>
-                <flux:heading size="lg" class="mb-4">{{ __('Activity') }}</flux:heading>
+            <flux:tab.group>
+                <flux:tabs>
+                    <flux:tab name="activity">{{ __('Activity') }}</flux:tab>
+                    <flux:tab
+                        name="work-log"
+                        x-data="{ unseen: {{ $this->unseenWorkLogCount }} }"
+                        x-on:click="if (unseen > 0) { unseen = 0; $wire.markWorkLogsSeen() }"
+                    >
+                        {{ __('Work Log') }}
 
+                        <template x-if="unseen > 0">
+                            <flux:badge
+                                rounded
+                                size="sm"
+                                color="green"
+                                variant="solid"
+                                x-text="unseen"
+                                :title="__('New work log entries')"
+                            />
+                        </template>
+                    </flux:tab>
+                </flux:tabs>
+
+                <flux:tab.panel name="activity" class="space-y-6">
+                {{-- Timeline --}}
+                <div>
                 <flux:timeline>
                     @foreach ($this->timeline as $item)
                         @if ($item instanceof \App\Models\TicketComment)
-                            <flux:timeline.item wire:key="comment-{{ $item->id }}">
+                            <flux:timeline.item wire:key="comment-{{ $item->id }}" align="baseline">
                                 <flux:timeline.indicator variant="bare">
                                     <flux:avatar size="xs" circle :name="$item->user->name" :initials="$item->user->initials()" :color="$item->is_internal ? 'amber' : ($item->user->isStaff() ? 'sky' : null)" />
                                 </flux:timeline.indicator>
@@ -151,7 +173,7 @@
                         @else
                             <flux:timeline.item wire:key="activity-{{ $item->id }}">
                                 <flux:timeline.indicator :color="$item->type === 'at_risk' ? 'amber' : ($item->isSlaEvent() ? 'red' : null)">
-                                    <flux:icon :name="$item->icon()" variant="micro" />
+                                    <flux:icon size="xs" :name="$item->icon()" variant="micro" />
                                 </flux:timeline.indicator>
 
                                 <flux:timeline.content>
@@ -234,6 +256,48 @@
                     <flux:callout.text>{{ __('This ticket is closed. Please open a new ticket if the problem comes back.') }}</flux:callout.text>
                 </flux:callout>
             @endcan
+                </flux:tab.panel>
+
+                <flux:tab.panel name="work-log" class="space-y-4">
+                    <flux:timeline>
+                        @foreach ($this->workLogs as $log)
+                            <flux:timeline.item wire:key="work-log-{{ $log->id }}" align="baseline">
+                                <flux:timeline.indicator variant="bare">
+                                    <flux:avatar size="xs" circle :name="$log->user->name" :initials="$log->user->initials()" color="violet" />
+                                </flux:timeline.indicator>
+
+                                <flux:timeline.content>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <flux:heading>{{ $log->user->name }}</flux:heading>
+                                        <flux:badge size="sm" color="violet" icon="wrench">{{ __('Work log') }}</flux:badge>
+                                        <flux:tooltip :content="$log->created_at->format('d M Y H:i')">
+                                            <flux:text size="sm">{{ $log->created_at->diffForHumans() }}</flux:text>
+                                        </flux:tooltip>
+                                    </div>
+
+                                    <flux:card size="sm" class="mt-2">
+                                        <div class="rich-text text-zinc-800! dark:text-zinc-200!">{!! $log->body !!}</div>
+                                    </flux:card>
+                                </flux:timeline.content>
+                            </flux:timeline.item>
+                        @endforeach
+                    </flux:timeline>
+
+                    @if ($this->workLogs->isEmpty())
+                        <flux:text class="text-zinc-400">{{ __('No work log entries yet.') }}</flux:text>
+                    @endif
+
+                    @can('addWorkLog', $ticket)
+                        <form wire:submit="addWorkLog" class="space-y-3">
+                            <flux:editor wire:model="workLogBody" :label="__('Add work log entry')" placeholder="{{ __('Describe the work done…') }}" />
+
+                            <div class="flex justify-end">
+                                <flux:button type="submit" size="sm" variant="primary" icon="plus">{{ __('Add entry') }}</flux:button>
+                            </div>
+                        </form>
+                    @endcan
+                </flux:tab.panel>
+            </flux:tab.group>
         </div>
 
         {{-- Sidebar --}}

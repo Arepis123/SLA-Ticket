@@ -8,6 +8,7 @@ use App\Models\Ticket;
 use App\Models\TicketActivity;
 use App\Models\TicketAttachment;
 use App\Models\TicketComment;
+use App\Models\TicketWorkLog;
 use App\Models\User;
 use App\Services\TicketManager;
 use Flux\Flux;
@@ -44,6 +45,9 @@ class Show extends Component
 
     /** @var array<int, UploadedFile> */
     public array $files = [];
+
+    // Work log form
+    public string $workLogBody = '';
 
     public function mount(Ticket $ticket): void
     {
@@ -132,6 +136,49 @@ class Show extends Component
         $this->refreshTicket();
     }
 
+    public function addWorkLog(TicketManager $manager): void
+    {
+        Gate::authorize('addWorkLog', $this->ticket);
+
+        $this->validate([
+            'workLogBody' => [
+                'required',
+                'string',
+                'max:10000',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if (trim(strip_tags((string) $value)) === '') {
+                        $fail(__('Please enter a work log entry.'));
+                    }
+                },
+            ],
+        ], attributes: ['workLogBody' => __('work log entry')]);
+
+        $manager->logWork($this->ticket, Auth::user(), $this->workLogBody);
+
+        $this->reset('workLogBody');
+        $this->notify(__('Work log entry added.'));
+        $this->refreshTicket();
+    }
+
+    /**
+     * Opening the work log tab clears its unread badge. Rendering is skipped on
+     * purpose: Flux keeps the selected tab in JS state and only writes it to the
+     * DOM, so letting Livewire morph here would re-hide the panel the user just
+     * opened. The badge is cleared client-side instead.
+     */
+    public function markWorkLogsSeen(): void
+    {
+        $this->skipRender();
+
+        if ($this->unseenWorkLogCount === 0) {
+            return;
+        }
+
+        $this->ticket->markWorkLogReadBy(Auth::user());
+
+        unset($this->unseenWorkLogCount);
+    }
+
     public function removeFile(int $index): void
     {
         unset($this->files[$index]);
@@ -173,7 +220,7 @@ class Show extends Component
     {
         $this->ticket->refresh();
         $this->syncPanel();
-        unset($this->timeline, $this->ticketAttachments);
+        unset($this->timeline, $this->ticketAttachments, $this->workLogs, $this->unseenWorkLogCount);
     }
 
     protected function notify(string $message): void
@@ -216,6 +263,27 @@ class Show extends Component
     public function ticketAttachments(): EloquentCollection
     {
         return $this->ticket->attachments()->whereNull('ticket_comment_id')->get();
+    }
+
+    /**
+     * Work log entries, visible to everyone who can view the ticket.
+     *
+     * @return EloquentCollection<int, TicketWorkLog>
+     */
+    #[Computed]
+    public function workLogs(): EloquentCollection
+    {
+        return $this->ticket->workLogs()->with('user')->get();
+    }
+
+    /**
+     * Entries added by someone else since this user last opened the work log
+     * tab. Drives the tab badge, since the activity tab is the one shown first.
+     */
+    #[Computed]
+    public function unseenWorkLogCount(): int
+    {
+        return $this->ticket->unreadWorkLogCountFor(Auth::user());
     }
 
     /**

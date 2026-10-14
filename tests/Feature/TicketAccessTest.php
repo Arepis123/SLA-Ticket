@@ -177,6 +177,58 @@ class TicketAccessTest extends TestCase
         $this->actingAs($admin)->get(route('tickets.attachments.show', [$ticket, $attachment]))->assertOk();
     }
 
+    public function test_staff_can_add_a_work_log_visible_to_everyone_but_clients_cannot_add_one(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $admin = User::factory()->admin()->create();
+
+        $workLog = app(TicketManager::class)->logWork($ticket, $admin, 'Investigated the root cause in the logs');
+
+        $this->assertSame($admin->id, $workLog->user_id);
+        $this->actingAs($admin)->get(route('tickets.show', $ticket))->assertSee('Investigated the root cause in the logs');
+        $this->actingAs($ticket->reporter)->get(route('tickets.show', $ticket))->assertSee('Investigated the root cause in the logs');
+
+        Livewire::actingAs($ticket->reporter)->test(Show::class, ['ticket' => $ticket])
+            ->set('workLogBody', 'I should not be able to do this')
+            ->call('addWorkLog')
+            ->assertForbidden();
+    }
+
+    public function test_unseen_work_log_entries_are_badged_until_the_client_opens_the_tab(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $client = $ticket->reporter;
+        $admin = User::factory()->admin()->create();
+        $manager = app(TicketManager::class);
+
+        // Nothing logged yet, so nothing to badge.
+        Livewire::actingAs($client)->test(Show::class, ['ticket' => $ticket])
+            ->assertSet('unseenWorkLogCount', 0);
+
+        $manager->logWork($ticket, $admin, 'First entry');
+        $manager->logWork($ticket, $admin, 'Second entry');
+
+        Livewire::actingAs($client)->test(Show::class, ['ticket' => $ticket])
+            ->assertSet('unseenWorkLogCount', 2)
+            ->call('markWorkLogsSeen')
+            ->assertSet('unseenWorkLogCount', 0);
+
+        // The read mark persists for the next visit.
+        Livewire::actingAs($client)->test(Show::class, ['ticket' => $ticket])
+            ->assertSet('unseenWorkLogCount', 0);
+
+        // A later entry badges again, and only for the people who haven't read it.
+        $this->travel(1)->minute();
+        $manager->logWork($ticket, $admin, 'Third entry');
+
+        Livewire::actingAs($client)->test(Show::class, ['ticket' => $ticket])
+            ->assertSet('unseenWorkLogCount', 1);
+
+        // The author never badges their own entries.
+        Livewire::actingAs($admin)->test(Show::class, ['ticket' => $ticket])
+            ->assertSet('unseenWorkLogCount', 0);
+    }
+
     public function test_clients_cannot_change_status_but_staff_can(): void
     {
         $ticket = Ticket::factory()->create();

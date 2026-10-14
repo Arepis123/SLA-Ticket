@@ -11,10 +11,10 @@
             @style(["background-image: url('{$background}')" => $background])
         >
             @if ($background)
-                <div class="absolute inset-0 bg-black/50 backdrop-blur-[6px]"></div>
+                <div class="absolute inset-0 bg-white/40 backdrop-blur-[6px] dark:bg-black/50"></div>
             @endif
 
-            <div @class(['relative flex w-full flex-col gap-2', 'max-w-sm' => ! $background, 'max-w-md rounded-2xl border border-white/10 bg-zinc-900/80 p-8 shadow-2xl backdrop-blur-md' => $background])>
+            <div @class(['relative flex w-full flex-col gap-2', 'max-w-sm' => ! $background, 'max-w-md rounded-2xl border border-black/10 bg-white/85 p-8 shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/80' => $background])>
                 <a href="{{ route('home') }}" class="flex flex-col items-center gap-2 font-medium" wire:navigate>
                     <span class="flex h-9 w-9 mb-1 items-center justify-center rounded-md">
                         <x-app-logo-icon class="size-9 fill-current text-black dark:text-white" />

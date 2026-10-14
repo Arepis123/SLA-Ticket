@@ -116,7 +116,7 @@
 
         <flux:chart :value="$this->trend" wire:key="trend-{{ md5(json_encode($this->trend)) }}" class="mt-6 aspect-[4/1] min-h-48">
             <flux:chart.svg>
-                <flux:chart.bar field="opened" class="text-sky-500 dark:text-sky-400" radius="4" width="60%" />
+                <flux:chart.bar field="opened" class="text-sky-500 dark:text-sky-400" radius="4 0" width="60%" />
 
                 <flux:chart.axis axis="x" field="label" scale="categorical">
                     <flux:chart.axis.line />

@@ -4,45 +4,45 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
-                <flux:sidebar.collapse class="lg:hidden" />
+                <flux:sidebar.collapse class="in-data-flux-sidebar-on-desktop:not-in-data-flux-sidebar-collapsed-desktop:-mr-2" />
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Support')" class="grid">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
+                <div class="px-3 py-2 text-sm text-zinc-400 font-medium leading-none truncate in-data-flux-sidebar-collapsed-desktop:hidden">{{ __('Support') }}</div>
+
+                <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
+                    {{ __('Dashboard') }}
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="ticket" :href="route('tickets.index')" :current="request()->routeIs('tickets.index', 'tickets.show')" wire:navigate>
+                    {{ auth()->user()->isClientAdmin() ? __('Company Tickets') : (auth()->user()->isClient() ? __('My Tickets') : __('Tickets')) }}
+                </flux:sidebar.item>
+                @can('create', \App\Models\Ticket::class)
+                    <flux:sidebar.item icon="plus-circle" :href="route('tickets.create')" :current="request()->routeIs('tickets.create')" wire:navigate>
+                        {{ __('Report a Bug') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="ticket" :href="route('tickets.index')" :current="request()->routeIs('tickets.index', 'tickets.show')" wire:navigate>
-                        {{ auth()->user()->isClientAdmin() ? __('Company Tickets') : (auth()->user()->isClient() ? __('My Tickets') : __('Tickets')) }}
-                    </flux:sidebar.item>
-                    @can('create', \App\Models\Ticket::class)
-                        <flux:sidebar.item icon="plus-circle" :href="route('tickets.create')" :current="request()->routeIs('tickets.create')" wire:navigate>
-                            {{ __('Report a Bug') }}
-                        </flux:sidebar.item>
-                    @endcan
-                </flux:sidebar.group>
+                @endcan
 
                 @can('admin')
-                    <flux:sidebar.group :heading="__('Administration')" class="grid">
-                        <flux:sidebar.item icon="building-office-2" :href="route('admin.companies')" :current="request()->routeIs('admin.companies')" wire:navigate>
-                            {{ __('Clients') }}
-                        </flux:sidebar.item>
-                        <flux:sidebar.item icon="squares-2x2" :href="route('admin.projects')" :current="request()->routeIs('admin.projects')" wire:navigate>
-                            {{ __('Projects') }}
-                        </flux:sidebar.item>
-                        <flux:sidebar.item icon="users" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>
-                            {{ __('Users') }}
-                        </flux:sidebar.item>
-                        <flux:sidebar.item icon="clock" :href="route('admin.sla-policies')" :current="request()->routeIs('admin.sla-policies')" wire:navigate>
-                            {{ __('SLA Policies') }}
-                        </flux:sidebar.item>
-                        <flux:sidebar.item icon="chart-bar" :href="route('admin.reports')" :current="request()->routeIs('admin.reports')" wire:navigate>
-                            {{ __('Reports') }}
-                        </flux:sidebar.item>
-                    </flux:sidebar.group>
+                    <div class="mt-4 px-3 py-2 text-sm text-zinc-400 font-medium leading-none truncate in-data-flux-sidebar-collapsed-desktop:hidden">{{ __('Administration') }}</div>
+
+                    <flux:sidebar.item icon="building-office-2" :href="route('admin.companies')" :current="request()->routeIs('admin.companies')" wire:navigate>
+                        {{ __('Clients') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="squares-2x2" :href="route('admin.projects')" :current="request()->routeIs('admin.projects')" wire:navigate>
+                        {{ __('Projects') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="users" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>
+                        {{ __('Users') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="clock" :href="route('admin.sla-policies')" :current="request()->routeIs('admin.sla-policies')" wire:navigate>
+                        {{ __('SLA Policies') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="chart-bar" :href="route('admin.reports')" :current="request()->routeIs('admin.reports')" wire:navigate>
+                        {{ __('Reports') }}
+                    </flux:sidebar.item>
                 @endcan
             </flux:sidebar.nav>
 

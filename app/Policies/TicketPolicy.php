@@ -47,6 +47,14 @@ class TicketPolicy
     }
 
     /**
+     * Only staff can log work; visible to anyone who can view the ticket.
+     */
+    public function addWorkLog(User $user, Ticket $ticket): bool
+    {
+        return $user->isStaff() && $this->view($user, $ticket);
+    }
+
+    /**
      * Client confirms the fix (closes) or rejects it (reopens).
      */
     public function respondToResolution(User $user, Ticket $ticket): bool

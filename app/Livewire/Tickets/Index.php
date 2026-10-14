@@ -120,7 +120,7 @@ class Index extends Component
                 $this->direction === 'asc' ? 'asc' : 'desc',
             ))
             ->orderByDesc('id')
-            ->paginate(15);
+            ->paginate(10);
     }
 
     /**

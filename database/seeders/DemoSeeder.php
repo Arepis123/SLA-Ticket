@@ -42,6 +42,33 @@ class DemoSeeder extends Seeder
         ['Typo on the receipt footer', 'The footer reads "Thank yuo".'],
     ];
 
+    /**
+     * Rich-text engineer notes written while a fix is being investigated.
+     *
+     * @var array<int, string>
+     */
+    protected array $investigationLogs = [
+        '<p>Reproduced on staging using a copy of the client\'s data.</p><ul><li>Only happens when the session has been idle for more than 15 minutes</li><li>Stack trace points at the <strong>null check</strong> that was removed in last week\'s release</li></ul>',
+        '<p><strong>Root cause found.</strong> The query is missing an index, so it falls back to a full table scan once the table passes ~50k rows.</p><p>Next step: add the index behind a migration and re-measure.</p>',
+        '<p>Pulled the production logs for the reported time window.</p><ol><li>Request arrives and is authenticated</li><li>Downstream API call times out after 30s</li><li>Our handler swallows the exception and returns an empty payload</li></ol><p>The timeout is the real problem; the empty response is just the symptom.</p>',
+        '<p>Not reproducible on Chrome or Firefox, only on <strong>Safari</strong>. Narrowing it down to a CSS issue rather than application logic.</p>',
+        '<p>Checked with the client to confirm the expected behaviour before changing anything:</p><blockquote>The total should include service tax, the same as the on-screen summary.</blockquote><p>Confirmed. The on-screen calculation is correct and the export is the one that needs fixing.</p>',
+        '<p>Added temporary logging around the affected code path so we can capture the exact payload the next time it happens.</p><p><em>Waiting for the next occurrence before making any change.</em></p>',
+    ];
+
+    /**
+     * Rich-text engineer notes written when the fix ships.
+     *
+     * @var array<int, string>
+     */
+    protected array $fixLogs = [
+        '<p><strong>Fix deployed to production.</strong></p><ul><li>Restored the missing validation check</li><li>Added a regression test covering the idle-session case</li></ul><p>Monitoring error rates for the next 24 hours.</p>',
+        '<p>Deployed the index migration during the maintenance window.</p><p>Page load went from <strong>~30s</strong> down to <strong>under 1s</strong> on the same dataset.</p>',
+        '<p>Patched the export so it reuses the same calculation as the on-screen summary instead of duplicating the logic. That removes the chance of the two drifting apart again.</p>',
+        '<p>Fix released. Changes made:</p><ol><li>Raised the downstream timeout and added one retry</li><li>Surfaced a proper error instead of an empty response when the call does fail</li></ol>',
+        '<p>Corrected the text and deployed. Also swept the rest of the templates for the same typo &mdash; <strong>two more</strong> were found and fixed.</p>',
+    ];
+
     public function run(TicketManager $manager): void
     {
         Notification::fake();
@@ -145,6 +172,15 @@ class DemoSeeder extends Seeder
             $manager->changeStatus($ticket, TicketStatus::InProgress, $assignee);
             $manager->comment($ticket, $assignee, 'Thanks for reporting. We are able to reproduce the issue and are working on a fix.');
 
+            if ($step(random_int(15, 180))) {
+                $manager->logWork($ticket, $assignee, fake()->randomElement($this->investigationLogs));
+
+                // Longer-running tickets pick up a second note from whoever else looked at it.
+                if (fake()->boolean(35) && $step(random_int(60, 8 * 60))) {
+                    $manager->logWork($ticket, $staff->random(), fake()->randomElement($this->investigationLogs));
+                }
+            }
+
             if ($stage === 3) {
                 if ($step(random_int(30, 240))) {
                     $manager->comment($ticket, $assignee, 'Could you share a screenshot and the exact time the error happened?');
@@ -174,6 +210,7 @@ class DemoSeeder extends Seeder
             if (! $step((int) ($targets['resolution'] * $speed))) {
                 continue;
             }
+            $manager->logWork($ticket, $assignee, fake()->randomElement($this->fixLogs));
             $manager->comment($ticket, $assignee, 'A fix has been deployed to production. Please verify on your side.');
             $manager->changeStatus($ticket, TicketStatus::Resolved, $assignee);
 

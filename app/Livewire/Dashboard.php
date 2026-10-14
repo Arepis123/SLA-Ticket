@@ -96,7 +96,7 @@ class Dashboard extends Component
                 $ticket->slaState() === SlaState::Breached ? 0 : 1,
                 $ticket->resolution_due_at->getTimestamp(),
             ])
-            ->take(8)
+            ->take(5)
             ->values();
     }
 
