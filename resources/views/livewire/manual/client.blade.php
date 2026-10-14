@@ -6,6 +6,7 @@
                 <li>{{ __('Sign in with the email and password you were given, or use the link emailed to you to set your own password.') }}</li>
                 <li>{{ __('Forgot your password? Click "Forgot your password?" on the sign-in page to get a reset link by email.') }}</li>
                 <li>{{ __('Click your name at the bottom of the sidebar and choose Settings to change your name, email or password, switch on two-factor authentication, or change between light and dark mode.') }}</li>
+                <li>{{ __('Under Settings → Security you can also add a passkey, which lets you sign in with your fingerprint, face or device PIN instead of typing your password.') }}</li>
             </x-manual.steps>
         </flux:accordion.item>
 
@@ -56,7 +57,17 @@
             <flux:text>{{ __('The Activity timeline shows every reply and status change in order, so you can always see what has happened so far.') }}</flux:text>
         </flux:accordion.item>
 
-        <flux:accordion.item :heading="__('6. When the team needs more information')">
+        <flux:accordion.item :heading="__('6. Seeing what the team has done')">
+            <flux:text>{{ __('An open ticket has two tabs:') }}</flux:text>
+            <x-manual.steps bullets>
+                <li><flux:text inline variant="strong">{{ __('Activity') }}</flux:text> — {{ __('the conversation. Every reply and status change, in order. This is the tab you start on.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Work Log') }}</flux:text> — {{ __('the record the support team keeps of what they investigated and fixed.') }}</li>
+            </x-manual.steps>
+            <flux:text>{{ __('A green number on the "Work Log" tab means the team has added entries you have not read yet. Click the tab to read them and the number disappears. You are emailed about new entries as well, so you will not miss them while you are looking at the Activity tab.') }}</flux:text>
+            <flux:text class="mt-2">{{ __('Only the support team can write in the work log. The ticket page refreshes itself every minute, so new replies and entries appear without you reloading.') }}</flux:text>
+        </flux:accordion.item>
+
+        <flux:accordion.item :heading="__('7. When the team needs more information')">
             <flux:text>{{ __('If the team cannot continue without your input, the ticket changes to "Pending Client" and you receive an email.') }}</flux:text>
             <x-manual.steps bullets>
                 <li>{{ __('The deadline clock is paused while the ticket waits for you, so the fix may take longer the later you reply.') }}</li>
@@ -65,7 +76,7 @@
             </x-manual.steps>
         </flux:accordion.item>
 
-        <flux:accordion.item :heading="__('7. Confirming a fix, or reopening')">
+        <flux:accordion.item :heading="__('8. Confirming a fix, or reopening')">
             <flux:text>{{ __('When the team marks a ticket as "Resolved" you receive an email and a green box appears at the top of the ticket. Please test the fix, then:') }}</flux:text>
             <x-manual.steps bullets>
                 <li><flux:text inline variant="strong">{{ __('It works:') }}</flux:text> {{ __('click "Confirm fix". The ticket is closed.') }}</li>
@@ -79,10 +90,11 @@
             <flux:text class="mt-3">{{ __('A closed ticket cannot be replied to. If the problem comes back later, please report a new bug and mention the old reference number.') }}</flux:text>
         </flux:accordion.item>
 
-        <flux:accordion.item :heading="__('8. Emails you will receive')">
+        <flux:accordion.item :heading="__('9. Emails you will receive')">
             <x-manual.steps bullets>
                 <li>{{ __('When the status of your ticket changes (for example to In Progress, Pending Client or Resolved).') }}</li>
                 <li>{{ __('When the support team replies to your ticket.') }}</li>
+                <li>{{ __('When the support team adds a work log entry to a ticket you reported.') }}</li>
             </x-manual.steps>
             <flux:text>{{ __('Each email has a button that takes you straight to the ticket.') }}</flux:text>
         </flux:accordion.item>

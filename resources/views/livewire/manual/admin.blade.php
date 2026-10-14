@@ -88,7 +88,7 @@
                 <li>{{ __('A client replies to, confirms or reopens any ticket.') }}</li>
                 <li>{{ __('Any ticket becomes at risk (:pct% of its time used) or breaches its first-response or resolution target.', ['pct' => config('sla.at_risk_threshold')]) }}</li>
             </x-manual.steps>
-            <flux:text>{{ __('Each ticket\'s Activity timeline keeps a permanent record of every status, priority and assignee change and every SLA event.') }}</flux:text>
+            <flux:text>{{ __('Each ticket\'s Activity timeline keeps a permanent record of every status, priority and assignee change and every SLA event. The Work Log tab is a second permanent record, written by the support team and readable by the client; see "The work log" in the Support team guide.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('7. Reports')">
@@ -103,12 +103,20 @@
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('8. Keeping the system running')">
-            <flux:text>{{ __('Two background processes must be running on the server, otherwise deadlines are not checked and emails are not sent:') }}</flux:text>
+            <flux:text>{{ __('Two jobs have to run in the background, otherwise deadlines are never checked and no email is ever sent:') }}</flux:text>
             <x-manual.steps bullets>
-                <li><flux:text inline variant="strong">{{ __('Scheduler') }}</flux:text> — {{ __('runs the SLA check every minute and auto-closes resolved tickets.') }}</li>
-                <li><flux:text inline variant="strong">{{ __('Queue worker') }}</flux:text> — {{ __('sends the notification emails.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('SLA check') }}</flux:text> — {{ __('flags at-risk and breached tickets, and auto-closes resolved ones.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Queue worker') }}</flux:text> — {{ __('sends the notification emails that the rest of the system queues up.') }}</li>
             </x-manual.steps>
-            <flux:text>{{ __('These settings live in the server\'s .env file:') }}</flux:text>
+            <flux:text>{{ __('There are two ways to run them, depending on what the hosting allows:') }}</flux:text>
+            <x-manual.steps>
+                <li>{{ __('If the server can run commands on a schedule, one cron entry calling "artisan schedule:run" every minute does both.') }}</li>
+                <li>{{ __('On hosting that cannot do that (such as a Plesk subscription without command tasks), schedule the address /cron.php instead, with its token, every one to two minutes. It runs exactly the same two jobs.') }}</li>
+            </x-manual.steps>
+            <flux:callout icon="exclamation-triangle" class="mt-3">
+                <flux:callout.text>{{ __('Whichever method is used, if it stops running the system looks healthy but goes quiet: no SLA badges change, no tickets auto-close and no email arrives. If people stop receiving email, check this first.') }}</flux:callout.text>
+            </flux:callout>
+            <flux:text class="mt-2">{{ __('These settings live in the server\'s .env file:') }}</flux:text>
             <flux:table class="mt-2">
                 <flux:table.columns>
                     <flux:table.column>{{ __('Setting') }}</flux:table.column>
@@ -135,6 +143,11 @@
                         <flux:table.cell class="font-mono">MAIL_MAILER</flux:table.cell>
                         <flux:table.cell class="whitespace-normal">{{ __('How emails are sent. "log" only writes them to the log file and delivers nothing.') }}</flux:table.cell>
                         <flux:table.cell variant="strong">{{ config('mail.default') }}</flux:table.cell>
+                    </flux:table.row>
+                    <flux:table.row>
+                        <flux:table.cell class="font-mono">SLA_CRON_TOKEN</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Secret that lets the scheduled task reach /cron.php. Empty means that address is switched off.') }}</flux:table.cell>
+                        <flux:table.cell variant="strong">{{ config('sla.cron_token') ? __('Set') : __('Not set') }}</flux:table.cell>
                     </flux:table.row>
                 </flux:table.rows>
             </flux:table>

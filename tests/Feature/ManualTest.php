@@ -22,10 +22,12 @@ class ManualTest extends TestCase
             ->assertOk()
             ->assertSee('Client guide')
             ->assertSee('Reporting a bug')
+            ->assertSee('Seeing what the team has done')
             ->assertDontSee('Support team guide')
             ->assertDontSee('Replies and internal notes')
             ->assertDontSee('Administrator guide')
-            ->assertDontSee('SLA_AT_RISK_THRESHOLD');
+            ->assertDontSee('SLA_AT_RISK_THRESHOLD')
+            ->assertDontSee('SLA_CRON_TOKEN');
     }
 
     public function test_internal_sees_the_support_team_and_client_guides(): void
@@ -35,10 +37,12 @@ class ManualTest extends TestCase
             ->assertOk()
             ->assertSee('Support team guide')
             ->assertSee('Replies and internal notes')
+            ->assertSee('The work log')
             ->assertSee('Client guide')
             ->assertSee('Reporting a bug')
             ->assertDontSee('Administrator guide')
-            ->assertDontSee('SLA_AT_RISK_THRESHOLD');
+            ->assertDontSee('SLA_AT_RISK_THRESHOLD')
+            ->assertDontSee('SLA_CRON_TOKEN');
     }
 
     public function test_internal_cannot_request_the_admin_guide_through_the_url(): void
@@ -58,7 +62,9 @@ class ManualTest extends TestCase
             ->assertSee('Support team guide')
             ->assertSee('Client guide')
             ->assertSee('SLA_AT_RISK_THRESHOLD')
+            ->assertSee('SLA_CRON_TOKEN')
             ->assertSee('Replies and internal notes')
+            ->assertSee('The work log')
             ->assertSee('Reporting a bug');
     }
 
