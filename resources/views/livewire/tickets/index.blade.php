@@ -79,7 +79,9 @@
                             <flux:link :href="route('tickets.show', $ticket)" variant="subtle" wire:navigate>{{ $ticket->reference }}</flux:link>
                         </flux:table.cell>
                         <flux:table.cell class="max-w-96">
-                            <flux:link :href="route('tickets.show', $ticket)" variant="ghost" class="block truncate font-medium" wire:navigate>{{ $ticket->title }}</flux:link>
+                            <div class="truncate">
+                                <flux:link :href="route('tickets.show', $ticket)" variant="ghost" class="font-medium" wire:navigate>{{ $ticket->title }}</flux:link>
+                            </div>
                             <flux:text size="sm" class="truncate">
                                 {{ $ticket->project->name }}@can('staff') · {{ $ticket->company->name }}@endcan
                                 @if (auth()->user()->isClientAdmin())

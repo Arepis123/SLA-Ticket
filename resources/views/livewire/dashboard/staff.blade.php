@@ -119,7 +119,9 @@
                         @foreach ($this->attention as $ticket)
                             <flux:table.row :key="$ticket->id">
                                 <flux:table.cell class="max-w-72">
-                                    <flux:link :href="route('tickets.show', $ticket)" variant="ghost" class="block truncate font-medium" wire:navigate>{{ $ticket->title }}</flux:link>
+                                    <div class="truncate">
+                                        <flux:link :href="route('tickets.show', $ticket)" variant="ghost" class="font-medium" wire:navigate>{{ $ticket->title }}</flux:link>
+                                    </div>
                                     <flux:text size="sm" class="truncate">{{ $ticket->reference }} · {{ $ticket->company->name }}</flux:text>
                                 </flux:table.cell>
                                 <flux:table.cell><x-ticket.priority-badge :priority="$ticket->priority" /></flux:table.cell>
