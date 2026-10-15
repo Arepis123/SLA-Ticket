@@ -19,7 +19,7 @@
 
     @if (count($this->guides) > 1)
         <flux:tab.group>
-            <flux:tabs wire:model="guide">
+            <flux:tabs wire:model="guide" scrollable scrollable:fade scrollable:scrollbar="hide">
                 @foreach ($this->guides as $role)
                     <flux:tab :name="$role->value" :icon="$guideMeta[$role->value]['icon']">{{ $guideMeta[$role->value]['label'] }}</flux:tab>
                 @endforeach

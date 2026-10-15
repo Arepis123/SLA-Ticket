@@ -272,7 +272,7 @@ class TicketAccessTest extends TestCase
         $this->assertSame(TicketStatus::Closed, $ticket->fresh()->status);
     }
 
-    public function test_staff_see_only_their_own_queue_until_they_clear_the_filters(): void
+    public function test_support_team_sees_only_their_own_queue_until_they_clear_the_filters(): void
     {
         $internal = User::factory()->internal()->create();
         $mine = Ticket::factory()->create(['assignee_id' => $internal->id]);
@@ -293,6 +293,26 @@ class TicketAccessTest extends TestCase
             ->assertSee($unassigned->reference);
 
         $this->actingAs($internal)->get(route('tickets.index', ['assignee' => '']))
+            ->assertSee($mine->reference)
+            ->assertSee($theirs->reference)
+            ->assertSee($unassigned->reference);
+    }
+
+    public function test_admins_have_no_assignee_filter_applied_by_default(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $mine = Ticket::factory()->create(['assignee_id' => $admin->id]);
+        $theirs = Ticket::factory()->create(['assignee_id' => User::factory()->internal()->create()->id]);
+        $unassigned = Ticket::factory()->create(['assignee_id' => null]);
+
+        Livewire::actingAs($admin)->test(Index::class)
+            ->assertSet('assignee', '')
+            ->assertSee($mine->reference)
+            ->assertSee($theirs->reference)
+            ->assertSee($unassigned->reference)
+            ->assertDontSee(__('Assigned to me'));
+
+        $this->actingAs($admin)->get(route('tickets.index', ['assignee' => 'me']))
             ->assertSee($mine->reference)
             ->assertSee($theirs->reference)
             ->assertSee($unassigned->reference);

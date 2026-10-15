@@ -51,12 +51,21 @@ class Index extends Component
     protected array $sortable = ['reference', 'title', 'priority', 'status', 'resolution_due_at', 'created_at', 'updated_at'];
 
     /**
-     * Staff land on their own queue by default. They can still reach every ticket
-     * they are allowed to see by clearing the filters.
+     * The support team lands on its own queue by default, and can still reach every
+     * ticket by clearing the filters. Admins oversee the whole backlog and clients
+     * have no assignee filter at all, so neither is narrowed down to "me".
      */
     public function mount(): void
     {
-        if (Auth::user()->isStaff() && ! request()->has('assignee')) {
+        if (! Auth::user()->isInternal()) {
+            if ($this->assignee === 'me') {
+                $this->assignee = '';
+            }
+
+            return;
+        }
+
+        if (! request()->has('assignee')) {
             $this->assignee = 'me';
         }
     }
@@ -110,7 +119,7 @@ class Index extends Component
             ->when(TicketPriority::tryFrom($this->priority), fn (Builder $query, TicketPriority $priority) => $query->where('priority', $priority))
             ->when($this->project !== '', fn (Builder $query) => $query->where('project_id', (int) $this->project))
             ->when($user->isStaff() && $this->assignee !== '', fn (Builder $query) => match ($this->assignee) {
-                'me' => $query->where('assignee_id', $user->id),
+                'me' => $user->isInternal() ? $query->where('assignee_id', $user->id) : $query,
                 'none' => $query->whereNull('assignee_id'),
                 default => $query->where('assignee_id', (int) $this->assignee),
             })

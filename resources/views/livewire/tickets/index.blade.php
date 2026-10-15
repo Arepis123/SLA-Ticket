@@ -43,7 +43,9 @@
         @can('staff')
             <flux:select variant="listbox" searchable wire:model.live="assignee">
                 <flux:select.option value="">{{ __('Anyone') }}</flux:select.option>
-                <flux:select.option value="me">{{ __('Assigned to me') }}</flux:select.option>
+                @if (auth()->user()->isInternal())
+                    <flux:select.option value="me">{{ __('Assigned to me') }}</flux:select.option>
+                @endif
                 <flux:select.option value="none">{{ __('Unassigned') }}</flux:select.option>
                 @foreach ($this->staff as $option)
                     <flux:select.option :value="$option->id">{{ $option->name }}</flux:select.option>

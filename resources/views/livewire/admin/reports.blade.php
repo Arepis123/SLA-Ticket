@@ -114,7 +114,7 @@
     <flux:card>
         <flux:heading size="lg">{{ __('Tickets opened over the period') }}</flux:heading>
 
-        <flux:chart :value="$this->trend" wire:key="trend-{{ md5(json_encode($this->trend)) }}" class="mt-6 aspect-[4/1] min-h-48">
+        <flux:chart :value="$this->trend" wire:key="trend-{{ md5(json_encode($this->trend)) }}" class="mt-6 w-full aspect-[4/1] min-h-48">
             <flux:chart.svg>
                 <flux:chart.bar field="opened" class="text-sky-500 dark:text-sky-400" radius="4 0" width="60%" />
 
@@ -143,7 +143,7 @@
         <flux:heading size="lg" class="mb-4">{{ __('Breakdown') }}</flux:heading>
 
         <flux:tab.group>
-            <flux:tabs wire:model="tab">
+            <flux:tabs wire:model="tab" scrollable scrollable:fade scrollable:scrollbar="hide">
                 @foreach ($this->breakdowns as $name => $breakdown)
                     <flux:tab :name="$name">{{ __('By :group', ['group' => Str::lower($breakdown['label'])]) }}</flux:tab>
                 @endforeach

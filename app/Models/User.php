@@ -90,6 +90,14 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->role === UserRole::Admin;
     }
 
+    /**
+     * A member of the support team: the people tickets get assigned to.
+     */
+    public function isInternal(): bool
+    {
+        return $this->role === UserRole::Internal;
+    }
+
     public function isStaff(): bool
     {
         return $this->role->isStaff();
