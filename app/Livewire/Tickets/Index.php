@@ -50,6 +50,17 @@ class Index extends Component
     /** @var list<string> */
     protected array $sortable = ['reference', 'title', 'priority', 'status', 'resolution_due_at', 'created_at', 'updated_at'];
 
+    /**
+     * Staff land on their own queue by default. They can still reach every ticket
+     * they are allowed to see by clearing the filters.
+     */
+    public function mount(): void
+    {
+        if (Auth::user()->isStaff() && ! request()->has('assignee')) {
+            $this->assignee = 'me';
+        }
+    }
+
     public function updated(string $property): void
     {
         if (in_array($property, ['search', 'status', 'priority', 'project', 'assignee', 'sla'], true)) {

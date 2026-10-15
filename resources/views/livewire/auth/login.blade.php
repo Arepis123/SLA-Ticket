@@ -1,4 +1,12 @@
-<x-layouts::auth :title="__('Log in')" :background="asset('images/background-2.2.jpg')">
+<x-layouts::auth.split
+    :title="__('Log in')"
+    :background="asset('images/background-4.jpeg')"
+    :background-dark="asset('images/background-5.jpeg')"
+>
+    <x-slot:info>
+        <x-auth-system-info />
+    </x-slot:info>
+
     <div class="flex flex-col gap-6">
         <x-auth-header :title="__('Log in to your account')" :description="__('Enter your email and password below to log in')" />
 
@@ -62,4 +70,4 @@
             </flux:text>
         @endif
     </div>
-</x-layouts::auth>
+</x-layouts::auth.split>

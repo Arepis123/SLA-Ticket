@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\TicketStatus;
 use App\Livewire\Admin\Users;
 use App\Livewire\Tickets\Create;
+use App\Livewire\Tickets\Index;
 use App\Livewire\Tickets\Show;
 use App\Models\Project;
 use App\Models\Ticket;
@@ -269,6 +270,41 @@ class TicketAccessTest extends TestCase
             ->call('confirmFix');
 
         $this->assertSame(TicketStatus::Closed, $ticket->fresh()->status);
+    }
+
+    public function test_staff_see_only_their_own_queue_until_they_clear_the_filters(): void
+    {
+        $internal = User::factory()->internal()->create();
+        $mine = Ticket::factory()->create(['assignee_id' => $internal->id]);
+        $theirs = Ticket::factory()->create(['assignee_id' => User::factory()->internal()->create()->id]);
+        $unassigned = Ticket::factory()->create(['assignee_id' => null]);
+
+        $this->actingAs($internal)->get(route('tickets.index'))
+            ->assertSee($mine->reference)
+            ->assertDontSee($theirs->reference)
+            ->assertDontSee($unassigned->reference);
+
+        Livewire::actingAs($internal)->test(Index::class)
+            ->assertSet('assignee', 'me')
+            ->call('resetFilters')
+            ->assertSet('assignee', '')
+            ->assertSee($mine->reference)
+            ->assertSee($theirs->reference)
+            ->assertSee($unassigned->reference);
+
+        $this->actingAs($internal)->get(route('tickets.index', ['assignee' => '']))
+            ->assertSee($mine->reference)
+            ->assertSee($theirs->reference)
+            ->assertSee($unassigned->reference);
+    }
+
+    public function test_clients_have_no_assignee_filter_applied_by_default(): void
+    {
+        $ticket = Ticket::factory()->create(['assignee_id' => User::factory()->internal()->create()->id]);
+
+        Livewire::actingAs($ticket->reporter)->test(Index::class)
+            ->assertSet('assignee', '')
+            ->assertSee($ticket->reference);
     }
 
     public function test_inactive_users_are_signed_out(): void
