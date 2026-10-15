@@ -85,6 +85,14 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->hasMany(Ticket::class, 'assignee_id');
     }
 
+    /**
+     * @return HasMany<SavedView, $this>
+     */
+    public function savedViews(): HasMany
+    {
+        return $this->hasMany(SavedView::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === UserRole::Admin;

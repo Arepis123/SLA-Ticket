@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TicketPriority;
+use App\Support\BusinessCalendar;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -12,13 +13,14 @@ use Illuminate\Support\Facades\Cache;
  * @property TicketPriority $priority
  * @property int $response_minutes
  * @property int $resolution_minutes
+ * @property bool $business_hours
  */
-#[Fillable(['priority', 'response_minutes', 'resolution_minutes'])]
+#[Fillable(['priority', 'response_minutes', 'resolution_minutes', 'business_hours'])]
 class SlaPolicy extends Model
 {
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget('sla-policies'));
+        static::saved(fn () => Cache::memo()->forget('sla-policies'));
     }
 
     /**
@@ -30,6 +32,7 @@ class SlaPolicy extends Model
             'priority' => TicketPriority::class,
             'response_minutes' => 'integer',
             'resolution_minutes' => 'integer',
+            'business_hours' => 'boolean',
         ];
     }
 
@@ -41,15 +44,36 @@ class SlaPolicy extends Model
      */
     public static function targetsFor(TicketPriority $priority): array
     {
-        $policies = Cache::rememberForever('sla-policies', fn () => static::query()
+        $policy = static::cached()[$priority->value] ?? null;
+
+        return $policy ? ['response' => $policy['response'], 'resolution' => $policy['resolution']] : $priority->defaultTargets();
+    }
+
+    /**
+     * Whether this priority's clock only runs during business hours. It needs opening
+     * hours to be configured too; without them every priority runs 24/7.
+     */
+    public static function usesBusinessHours(TicketPriority $priority): bool
+    {
+        return (static::cached()[$priority->value]['business_hours'] ?? false)
+            && app(BusinessCalendar::class)->hasHours();
+    }
+
+    /**
+     * Every policy row, memoized for the request since tickets ask for it constantly.
+     *
+     * @return array<string, array{response: int, resolution: int, business_hours?: bool}>
+     */
+    protected static function cached(): array
+    {
+        return Cache::memo()->rememberForever('sla-policies', fn () => static::query()
             ->get()
             ->mapWithKeys(fn (SlaPolicy $policy) => [$policy->priority->value => [
                 'response' => $policy->response_minutes,
                 'resolution' => $policy->resolution_minutes,
+                'business_hours' => $policy->business_hours,
             ]])
             ->all());
-
-        return $policies[$priority->value] ?? $priority->defaultTargets();
     }
 
     /**

@@ -22,7 +22,17 @@ class TicketPolicy
 
         return $user->company_id !== null
             && $user->company_id === $ticket->company_id
-            && ($user->isClientAdmin() || $ticket->reporter_id === $user->id);
+            && ($user->isClientAdmin()
+                || $ticket->reporter_id === $user->id
+                || $ticket->merges()->where('reporter_id', $user->id)->exists());
+    }
+
+    /**
+     * Merge a duplicate into another ticket, or undo that.
+     */
+    public function merge(User $user, Ticket $ticket): bool
+    {
+        return $user->isStaff();
     }
 
     /**

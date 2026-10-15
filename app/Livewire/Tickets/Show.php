@@ -49,6 +49,9 @@ class Show extends Component
     // Work log form
     public string $workLogBody = '';
 
+    // Merge form: id of the ticket this one duplicates
+    public string $mergeTarget = '';
+
     public function mount(Ticket $ticket): void
     {
         Gate::authorize('view', $ticket);
@@ -67,6 +70,7 @@ class Show extends Component
     public function updatedStatus(TicketManager $manager): void
     {
         Gate::authorize('manage', $this->ticket);
+        $this->ensureNotMerged();
 
         $status = TicketStatus::tryFrom($this->status);
 
@@ -81,6 +85,7 @@ class Show extends Component
     public function updatedPriority(TicketManager $manager): void
     {
         Gate::authorize('manage', $this->ticket);
+        $this->ensureNotMerged();
 
         $priority = TicketPriority::tryFrom($this->priority);
 
@@ -95,6 +100,7 @@ class Show extends Component
     public function updatedAssigneeId(TicketManager $manager): void
     {
         Gate::authorize('manage', $this->ticket);
+        $this->ensureNotMerged();
 
         $assignee = $this->assignee_id === '' ? null : User::staff()->find((int) $this->assignee_id);
         $manager->assign($this->ticket, $assignee, Auth::user());
@@ -105,6 +111,8 @@ class Show extends Component
 
     public function assignToMe(TicketManager $manager): void
     {
+        $this->ensureNotMerged();
+
         $this->assignee_id = (string) Auth::id();
         $this->updatedAssigneeId($manager);
     }
@@ -216,11 +224,61 @@ class Show extends Component
         $this->refreshTicket();
     }
 
+    /**
+     * Fold this ticket into the one it duplicates.
+     */
+    public function merge(TicketManager $manager): void
+    {
+        Gate::authorize('merge', $this->ticket);
+
+        $this->validate(['mergeTarget' => ['required', 'integer']], [
+            'mergeTarget.required' => __('Pick the ticket this one duplicates.'),
+        ]);
+
+        $primary = Ticket::find((int) $this->mergeTarget);
+        $error = $primary ? $manager->mergeError($this->ticket, $primary) : __('That ticket no longer exists.');
+
+        if ($error) {
+            $this->addError('mergeTarget', $error);
+
+            return;
+        }
+
+        $manager->merge($this->ticket, $primary, Auth::user());
+
+        Flux::modal('merge-ticket')->close();
+        $this->reset('mergeTarget');
+        $this->notify(__('Merged into :reference.', ['reference' => $primary->reference]));
+        $this->refreshTicket();
+    }
+
+    public function unmerge(TicketManager $manager): void
+    {
+        Gate::authorize('merge', $this->ticket);
+
+        $manager->unmerge($this->ticket, Auth::user());
+
+        $this->notify(__('Unmerged. The ticket is open again.'));
+        $this->refreshTicket();
+    }
+
+    /**
+     * A merged duplicate is frozen; its work happens on the primary ticket.
+     */
+    protected function ensureNotMerged(): void
+    {
+        if ($this->ticket->isMerged()) {
+            $this->syncPanel();
+
+            abort(422, __('This ticket is merged. Unmerge it first.'));
+        }
+    }
+
     protected function refreshTicket(): void
     {
         $this->ticket->refresh();
         $this->syncPanel();
-        unset($this->timeline, $this->ticketAttachments, $this->workLogs, $this->unseenWorkLogCount);
+        unset($this->timeline, $this->ticketAttachments, $this->workLogs, $this->unseenWorkLogCount, $this->duplicates, $this->mergeCandidates);
     }
 
     protected function notify(string $message): void
@@ -245,7 +303,9 @@ class Show extends Component
 
         $activities = $this->ticket->activities()
             ->with('user')
-            ->when(! $staff, fn ($query) => $query->whereIn('type', ['created', 'status_changed', 'auto_closed']))
+            ->when(! $staff, fn ($query) => $query->whereIn('type', [
+                'created', 'status_changed', 'auto_closed', 'merged_into', 'merged_from', 'unmerged', 'duplicate_removed',
+            ]))
             ->get();
 
         return $comments->toBase()
@@ -287,6 +347,36 @@ class Show extends Component
     }
 
     /**
+     * Duplicate reports merged into this ticket.
+     *
+     * @return EloquentCollection<int, Ticket>
+     */
+    #[Computed]
+    public function duplicates(): EloquentCollection
+    {
+        return $this->ticket->merges()->with('reporter')->orderBy('created_at')->get();
+    }
+
+    /**
+     * Tickets this one could be merged into: same client, still open (or awaiting
+     * confirmation), and not merged themselves.
+     *
+     * @return EloquentCollection<int, Ticket>
+     */
+    #[Computed]
+    public function mergeCandidates(): EloquentCollection
+    {
+        return Ticket::query()
+            ->where('company_id', $this->ticket->company_id)
+            ->whereKeyNot($this->ticket->id)
+            ->whereNull('merged_into_id')
+            ->where('status', '!=', TicketStatus::Closed)
+            ->latest()
+            ->limit(200)
+            ->get(['id', 'reference', 'title', 'status', 'project_id']);
+    }
+
+    /**
      * @return EloquentCollection<int, User>
      */
     #[Computed]
@@ -297,7 +387,7 @@ class Show extends Component
 
     public function render(): View
     {
-        $this->ticket->loadMissing(['project', 'company', 'reporter', 'assignee']);
+        $this->ticket->loadMissing(['project', 'company', 'reporter', 'assignee', 'mergedInto']);
 
         return view('livewire.tickets.show')->title($this->ticket->reference.' · '.$this->ticket->title);
     }

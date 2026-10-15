@@ -44,6 +44,7 @@ class Dashboard extends Component
         return Ticket::query()
             ->visibleTo(Auth::user())
             ->whereIn('status', [TicketStatus::Resolved, TicketStatus::Closed])
+            ->whereNull('merged_into_id')
             ->where('resolved_at', '>=', now()->subDays(30))
             ->get();
     }

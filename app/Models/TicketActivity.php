@@ -61,6 +61,10 @@ class TicketActivity extends Model
             'resolution_breached' => __('Resolution SLA breached'),
             'at_risk' => __('Resolution SLA is at risk'),
             'auto_closed' => __('Ticket closed automatically after no client response'),
+            'merged_into' => __('merged this ticket into :reference', ['reference' => $props['reference'] ?? '—']),
+            'merged_from' => __('merged :reference into this ticket', ['reference' => $props['reference'] ?? '—']),
+            'unmerged' => __('unmerged this ticket from :reference', ['reference' => $props['reference'] ?? '—']),
+            'duplicate_removed' => __('unmerged :reference from this ticket', ['reference' => $props['reference'] ?? '—']),
             default => $this->type,
         };
     }
@@ -75,6 +79,8 @@ class TicketActivity extends Model
             'response_breached', 'resolution_breached' => 'x-circle',
             'at_risk' => 'exclamation-triangle',
             'auto_closed' => 'lock-closed',
+            'merged_into', 'merged_from' => 'arrows-pointing-in',
+            'unmerged', 'duplicate_removed' => 'arrows-pointing-out',
             default => 'information-circle',
         };
     }

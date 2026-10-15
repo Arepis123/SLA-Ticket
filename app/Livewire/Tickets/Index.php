@@ -5,12 +5,15 @@ namespace App\Livewire\Tickets;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Models\Project;
+use App\Models\SavedView;
 use App\Models\Ticket;
 use App\Models\User;
+use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -49,6 +52,21 @@ class Index extends Component
 
     /** @var list<string> */
     protected array $sortable = ['reference', 'title', 'priority', 'status', 'resolution_due_at', 'created_at', 'updated_at'];
+
+    /**
+     * List state a saved view captures, with each value's default.
+     *
+     * @var array<string, string>
+     */
+    protected const VIEW_DEFAULTS = [
+        'search' => '', 'status' => '', 'priority' => '', 'project' => '',
+        'assignee' => '', 'sla' => '', 'sort' => 'created_at', 'direction' => 'desc',
+    ];
+
+    protected const MAX_SAVED_VIEWS = 20;
+
+    // Save-view form
+    public string $viewName = '';
 
     /**
      * The support team lands on its own queue by default, and can still reach every
@@ -93,6 +111,128 @@ class Index extends Component
         $this->resetPage();
     }
 
+    /**
+     * The current filters as a query string, leaving out defaults. The assignee is
+     * always kept: an empty one means "Anyone", which must survive the support
+     * team's "Assigned to me" default when the view is opened again.
+     *
+     * @return array<string, string>
+     */
+    #[Computed]
+    public function currentFilters(): array
+    {
+        $filters = [];
+
+        foreach (self::VIEW_DEFAULTS as $key => $default) {
+            if ($key === 'assignee' || $this->{$key} !== $default) {
+                $filters[$key] = $this->{$key};
+            }
+        }
+
+        return $filters;
+    }
+
+    /**
+     * @return Collection<int, SavedView>
+     */
+    #[Computed]
+    public function savedViews(): Collection
+    {
+        return Auth::user()->savedViews()->orderBy('name')->get();
+    }
+
+    /**
+     * The current filters in words, for the save dialog.
+     *
+     * @return list<string>
+     */
+    #[Computed]
+    public function filterSummary(): array
+    {
+        $user = Auth::user();
+
+        $summary = array_filter([
+            $this->search !== '' ? __('Search “:term”', ['term' => $this->search]) : null,
+            match ($this->status) {
+                '' => null,
+                'unresolved' => __('All unresolved'),
+                default => TicketStatus::tryFrom($this->status)?->label(),
+            },
+            TicketPriority::tryFrom($this->priority)?->label(),
+            $this->project !== '' ? $this->projects->firstWhere('id', (int) $this->project)?->name : null,
+            match ($this->sla) {
+                'breached' => __('SLA breached'),
+                'at_risk' => __('SLA at risk'),
+                default => null,
+            },
+            ! $user->isStaff() ? null : match ($this->assignee) {
+                '' => __('Anyone'),
+                'me' => __('Assigned to me'),
+                'none' => __('Unassigned'),
+                default => $this->staff->firstWhere('id', (int) $this->assignee)?->name,
+            },
+            $this->sort !== 'created_at' || $this->direction !== 'desc'
+                ? __('Sorted by :column, :direction', [
+                    'column' => str_replace('_', ' ', $this->sort === 'resolution_due_at' ? 'SLA' : $this->sort),
+                    'direction' => $this->direction === 'asc' ? __('ascending') : __('descending'),
+                ])
+                : null,
+        ]);
+
+        return array_values($summary);
+    }
+
+    /**
+     * The saved view matching the list as it is right now, if any.
+     */
+    #[Computed]
+    public function activeView(): ?SavedView
+    {
+        $current = $this->currentFilters;
+        ksort($current);
+
+        return $this->savedViews->first(function (SavedView $view) use ($current) {
+            $filters = $view->filters;
+            ksort($filters);
+
+            return $filters === $current;
+        });
+    }
+
+    public function saveView(): void
+    {
+        $user = Auth::user();
+
+        $this->validate([
+            'viewName' => ['required', 'string', 'max:60', Rule::unique('saved_views', 'name')->where('user_id', $user->id)],
+        ], [
+            'viewName.unique' => __('You already have a view with that name.'),
+        ], ['viewName' => __('name')]);
+
+        if ($user->savedViews()->count() >= self::MAX_SAVED_VIEWS) {
+            $this->addError('viewName', __('You can keep up to :max views. Delete one to make room.', ['max' => self::MAX_SAVED_VIEWS]));
+
+            return;
+        }
+
+        $user->savedViews()->create(['name' => trim($this->viewName), 'filters' => $this->currentFilters]);
+
+        $this->reset('viewName');
+        unset($this->savedViews, $this->activeView);
+
+        Flux::modal('save-view')->close();
+        Flux::toast(variant: 'success', text: __('View saved.'));
+    }
+
+    public function deleteView(int $id): void
+    {
+        Auth::user()->savedViews()->findOrFail($id)->delete();
+
+        unset($this->savedViews, $this->activeView);
+
+        Flux::toast(variant: 'success', text: __('View deleted.'));
+    }
+
     #[Computed]
     public function hasFilters(): bool
     {
@@ -110,7 +250,7 @@ class Index extends Component
 
         return Ticket::query()
             ->visibleTo($user)
-            ->with(['project', 'company', 'assignee', 'reporter'])
+            ->with(['project', 'company', 'assignee', 'reporter', 'mergedInto:id,reference'])
             ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('reference', 'like', "%{$this->search}%")
                 ->orWhere('title', 'like', "%{$this->search}%")))
@@ -123,7 +263,7 @@ class Index extends Component
                 'none' => $query->whereNull('assignee_id'),
                 default => $query->where('assignee_id', (int) $this->assignee),
             })
-            ->when($this->sla === 'breached', fn (Builder $query) => $query->where(fn (Builder $query) => $query
+            ->when($this->sla === 'breached', fn (Builder $query) => $query->whereNull('merged_into_id')->where(fn (Builder $query) => $query
                 ->whereNotNull('resolution_breached_at')
                 ->orWhereNotNull('response_breached_at')
                 ->orWhere(fn (Builder $query) => $query->running()->where('resolution_due_at', '<', now()))))

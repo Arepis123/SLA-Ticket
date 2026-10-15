@@ -9,6 +9,26 @@
         @endcan
     </div>
 
+    @if ($this->savedViews->isNotEmpty() || $this->hasFilters)
+        <div class="flex flex-wrap items-center gap-2">
+            <flux:icon name="bookmark" variant="micro" class="text-zinc-400" />
+
+            @foreach ($this->savedViews as $view)
+                @php($active = $this->activeView?->is($view))
+                <flux:button.group wire:key="view-{{ $view->id }}" class="max-w-full">
+                    <flux:button size="xs" :variant="$active ? 'primary' : 'outline'" :href="route('tickets.index', $view->filters)" :title="$view->name" wire:navigate>{{ \Illuminate\Support\Str::limit($view->name, 28) }}</flux:button>
+                    <flux:button size="xs" :variant="$active ? 'primary' : 'outline'" icon="x-mark" wire:click="deleteView({{ $view->id }})" wire:confirm="{{ __('Delete the view “:name”?', ['name' => $view->name]) }}" :aria-label="__('Delete view :name', ['name' => $view->name])" />
+                </flux:button.group>
+            @endforeach
+
+            @if ($this->hasFilters && ! $this->activeView)
+                <flux:modal.trigger name="save-view">
+                    <flux:button size="sm" variant="ghost" icon="plus">{{ __('Save view') }}</flux:button>
+                </flux:modal.trigger>
+            @endif
+        </div>
+    @endif
+
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Search ref or title…')" clearable class="xl:col-span-2" />
 
@@ -121,4 +141,28 @@
 
         <flux:pagination :paginator="$this->tickets" class="px-4 pb-3" />
     </flux:card>
+
+    <flux:modal name="save-view" class="w-full max-w-md">
+        <form wire:submit="saveView" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Save this view') }}</flux:heading>
+                <flux:text class="mt-2">{{ __('Keep these filters one click away. Views are private to you.') }}</flux:text>
+            </div>
+
+            @if ($this->filterSummary)
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach ($this->filterSummary as $part)
+                        <flux:badge size="sm">{{ $part }}</flux:badge>
+                    @endforeach
+                </div>
+            @endif
+
+            <flux:input wire:model="viewName" :label="__('Name')" :placeholder="__('e.g. Breached this week')" maxlength="60" required />
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                <flux:button type="submit" variant="primary">{{ __('Save view') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 </div>

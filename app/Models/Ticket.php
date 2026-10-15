@@ -7,6 +7,7 @@ use App\Enums\TicketCategory;
 use App\Enums\TicketEnvironment;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
+use App\Support\BusinessCalendar;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\TicketFactory;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $project_id
  * @property int $reporter_id
  * @property int|null $assignee_id
+ * @property int|null $merged_into_id
  * @property string $title
  * @property string $description
  * @property string|null $steps_to_reproduce
@@ -39,6 +41,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $closed_at
  * @property CarbonImmutable|null $paused_at
  * @property int $paused_minutes
+ * @property int $paused_business_minutes
  * @property CarbonImmutable|null $response_breached_at
  * @property CarbonImmutable|null $resolution_breached_at
  * @property CarbonImmutable|null $at_risk_notified_at
@@ -48,6 +51,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Project $project
  * @property-read User $reporter
  * @property-read User|null $assignee
+ * @property-read Ticket|null $mergedInto
  */
 #[Fillable([
     'company_id', 'project_id', 'reporter_id', 'assignee_id', 'title', 'description',
@@ -61,6 +65,7 @@ class Ticket extends Model
     protected $attributes = [
         'status' => 'open',
         'paused_minutes' => 0,
+        'paused_business_minutes' => 0,
     ];
 
     protected static function booted(): void
@@ -99,6 +104,7 @@ class Ticket extends Model
             'closed_at' => 'datetime',
             'paused_at' => 'datetime',
             'paused_minutes' => 'integer',
+            'paused_business_minutes' => 'integer',
             'response_breached_at' => 'datetime',
             'resolution_breached_at' => 'datetime',
             'at_risk_notified_at' => 'datetime',
@@ -135,6 +141,31 @@ class Ticket extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assignee_id');
+    }
+
+    /**
+     * The ticket this duplicate was merged into.
+     *
+     * @return BelongsTo<Ticket, $this>
+     */
+    public function mergedInto(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class, 'merged_into_id');
+    }
+
+    /**
+     * Duplicate reports merged into this ticket.
+     *
+     * @return HasMany<Ticket, $this>
+     */
+    public function merges(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'merged_into_id');
+    }
+
+    public function isMerged(): bool
+    {
+        return $this->merged_into_id !== null;
     }
 
     /**
@@ -206,7 +237,8 @@ class Ticket extends Model
 
     /**
      * Limit tickets to the ones the given user may see: staff see everything,
-     * client admins their whole company, other clients only their own reports.
+     * client admins their whole company, other clients their own reports plus
+     * any ticket one of their reports was merged into.
      *
      * @param  Builder<Ticket>  $query
      */
@@ -217,7 +249,9 @@ class Ticket extends Model
             $query->where('company_id', $user->company_id ?? 0);
 
             if (! $user->isClientAdmin()) {
-                $query->where('reporter_id', $user->id);
+                $query->where(fn (Builder $query) => $query
+                    ->where('reporter_id', $user->id)
+                    ->orWhereHas('merges', fn (Builder $query) => $query->where('reporter_id', $user->id)));
             }
         }
     }
@@ -251,10 +285,39 @@ class Ticket extends Model
     public function recalculateDueDates(): void
     {
         $targets = SlaPolicy::targetsFor($this->priority);
-        $start = CarbonImmutable::parse($this->created_at)->addMinutes($this->paused_minutes);
+        $created = CarbonImmutable::parse($this->created_at);
+
+        if ($this->usesBusinessHours()) {
+            $calendar = app(BusinessCalendar::class);
+
+            $this->response_due_at = $calendar->addMinutes($created, $this->paused_business_minutes + $targets['response']);
+            $this->resolution_due_at = $calendar->addMinutes($created, $this->paused_business_minutes + $targets['resolution']);
+
+            return;
+        }
+
+        $start = $created->addMinutes($this->paused_minutes);
 
         $this->response_due_at = $start->addMinutes($targets['response']);
         $this->resolution_due_at = $start->addMinutes($targets['resolution']);
+    }
+
+    /**
+     * Whether this ticket's SLA clock only runs during business hours.
+     */
+    public function usesBusinessHours(): bool
+    {
+        return SlaPolicy::usesBusinessHours($this->priority);
+    }
+
+    /**
+     * Whether the clock is standing still right now only because the office is closed.
+     */
+    public function isOutsideBusinessHours(): bool
+    {
+        return $this->status->isActive()
+            && $this->usesBusinessHours()
+            && ! app(BusinessCalendar::class)->isOpenAt(now());
     }
 
     public function isPaused(): bool
@@ -271,17 +334,25 @@ class Ticket extends Model
     }
 
     /**
-     * Percentage of the resolution window that has been used.
+     * Percentage of the resolution window that has been used, measured on the
+     * ticket's own clock (24/7 or business hours) with paused time left out.
      */
     public function resolutionProgress(): float
     {
-        $window = $this->created_at->addMinutes($this->paused_minutes)->diffInSeconds($this->resolution_due_at);
+        if ($this->usesBusinessHours()) {
+            $calendar = app(BusinessCalendar::class);
+            $paused = $this->paused_business_minutes * 60;
+            $window = $calendar->secondsBetween($this->created_at, $this->resolution_due_at) - $paused;
+            $elapsed = $calendar->secondsBetween($this->created_at, $this->clockNow()) - $paused;
+        } else {
+            $start = $this->created_at->addMinutes($this->paused_minutes);
+            $window = $start->diffInSeconds($this->resolution_due_at);
+            $elapsed = $start->diffInSeconds($this->clockNow(), false);
+        }
 
         if ($window <= 0) {
             return 100.0;
         }
-
-        $elapsed = $this->created_at->addMinutes($this->paused_minutes)->diffInSeconds($this->clockNow(), false);
 
         return round(max(0, $elapsed) / $window * 100, 1);
     }
@@ -300,6 +371,10 @@ class Ticket extends Model
 
     public function slaState(): SlaState
     {
+        if ($this->isMerged()) {
+            return SlaState::Merged;
+        }
+
         if ($this->status->isFinished()) {
             return $this->isResolutionBreached() ? SlaState::Breached : SlaState::Met;
         }
@@ -322,6 +397,11 @@ class Ticket extends Model
      */
     public function resolutionCountdown(): string
     {
+        if ($this->isMerged()) {
+            // The foreign key nulls itself if the primary is deleted, so a merged ticket always has one.
+            return __('Merged into :reference', ['reference' => $this->mergedInto->reference]);
+        }
+
         if ($this->status->isFinished()) {
             return __('Resolved in :time', ['time' => $this->created_at->addMinutes($this->paused_minutes)
                 ->diffForHumans($this->resolved_at ?? $this->closed_at, syntax: CarbonInterface::DIFF_ABSOLUTE, parts: 2)]);

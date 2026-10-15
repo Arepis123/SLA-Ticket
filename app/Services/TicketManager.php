@@ -13,12 +13,15 @@ use App\Notifications\NewTicketWorkLog;
 use App\Notifications\SlaAlert;
 use App\Notifications\TicketAssigned;
 use App\Notifications\TicketCreated;
+use App\Notifications\TicketMerged;
 use App\Notifications\TicketStatusChanged;
+use App\Support\BusinessCalendar;
 use App\Support\HtmlSanitizer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use InvalidArgumentException;
 
 class TicketManager
 {
@@ -64,9 +67,11 @@ class TicketManager
             $ticket->first_responded_at ??= $now;
         }
 
-        // Leaving a stopped state: credit the paused time and push due dates back.
+        // Leaving a stopped state: credit the paused time and push due dates back. Both clocks
+        // are credited so a later priority change can switch between them without losing it.
         if (! $from->isActive() && $status->isActive() && $ticket->paused_at) {
             $ticket->paused_minutes += (int) $ticket->paused_at->diffInMinutes($now);
+            $ticket->paused_business_minutes += app(BusinessCalendar::class)->minutesBetween($ticket->paused_at, $now);
             $ticket->paused_at = null;
             $ticket->recalculateDueDates();
         }
@@ -95,9 +100,10 @@ class TicketManager
 
         $this->log($ticket, $actor, 'status_changed', ['from' => $from->value, 'to' => $status->value]);
 
-        if ($ticket->reporter_id !== $actor->id) {
-            $ticket->reporter->notify(new TicketStatusChanged($ticket, $from));
-        }
+        Notification::send(
+            $this->clientWatchers($ticket)->reject(fn (User $user) => $user->id === $actor->id),
+            new TicketStatusChanged($ticket, $from),
+        );
 
         if ($actor->isClient()) {
             $this->staffWatchers($ticket)->each->notify(new TicketStatusChanged($ticket, $from));
@@ -169,7 +175,7 @@ class TicketManager
 
         $recipients = $author->isClient()
             ? $this->staffWatchers($ticket)
-            : ($internal ? $this->staffWatchers($ticket) : collect([$ticket->reporter]));
+            : ($internal ? $this->staffWatchers($ticket) : $this->clientWatchers($ticket));
 
         Notification::send(
             $recipients->reject(fn (User $user) => $user->id === $author->id),
@@ -204,11 +210,92 @@ class TicketManager
         });
 
         Notification::send(
-            collect([$ticket->reporter])->reject(fn (User $user) => $user->id === $author->id),
+            $this->clientWatchers($ticket)->reject(fn (User $user) => $user->id === $author->id),
             new NewTicketWorkLog($workLog),
         );
 
         return $workLog;
+    }
+
+    /**
+     * Why a duplicate cannot be merged into the given ticket, or null when it can.
+     */
+    public function mergeError(Ticket $duplicate, Ticket $primary): ?string
+    {
+        return match (true) {
+            $duplicate->is($primary) => __('A ticket cannot be merged into itself.'),
+            $duplicate->isMerged() => __('This ticket is already merged into :reference.', ['reference' => $duplicate->mergedInto->reference]),
+            $primary->isMerged() => __(':reference was itself merged into :target. Merge into :target instead.', [
+                'reference' => $primary->reference,
+                'target' => $primary->mergedInto->reference,
+            ]),
+            $duplicate->company_id !== $primary->company_id => __('Tickets can only be merged within the same client.'),
+            $primary->status === TicketStatus::Closed => __(':reference is closed. Reopen it first, or merge into an open ticket.', ['reference' => $primary->reference]),
+            default => null,
+        };
+    }
+
+    /**
+     * Fold a duplicate report into the ticket that carries the work. The duplicate
+     * closes with its clock stopped, anything already merged into it moves along,
+     * and its reporter follows the primary ticket from then on.
+     */
+    public function merge(Ticket $duplicate, Ticket $primary, User $actor): void
+    {
+        if ($error = $this->mergeError($duplicate, $primary)) {
+            throw new InvalidArgumentException($error);
+        }
+
+        DB::transaction(function () use ($duplicate, $primary, $actor) {
+            $now = now();
+
+            // Keep it one level deep: earlier duplicates of this ticket follow it to the primary.
+            $duplicate->merges()->update(['merged_into_id' => $primary->id]);
+
+            $duplicate->merged_into_id = $primary->id;
+
+            if (! $duplicate->status->isFinished()) {
+                if ($duplicate->status->isActive()) {
+                    $duplicate->paused_at = $now;
+                }
+
+                $duplicate->status = TicketStatus::Closed;
+                $duplicate->closed_at = $now;
+                $duplicate->resolved_at ??= $now;
+            }
+
+            $duplicate->save();
+            $primary->touch();
+
+            $this->log($duplicate, $actor, 'merged_into', ['reference' => $primary->reference]);
+            $this->log($primary, $actor, 'merged_from', ['reference' => $duplicate->reference]);
+        });
+
+        if ($duplicate->reporter_id !== $actor->id) {
+            $duplicate->reporter->notify(new TicketMerged($duplicate, $primary));
+        }
+    }
+
+    /**
+     * Undo a merge: the ticket stands on its own again and reopens.
+     */
+    public function unmerge(Ticket $duplicate, User $actor): void
+    {
+        $primary = $duplicate->mergedInto;
+
+        if (! $primary) {
+            return;
+        }
+
+        DB::transaction(function () use ($duplicate, $primary, $actor) {
+            $duplicate->merged_into_id = null;
+            $duplicate->save();
+
+            $this->log($duplicate, $actor, 'unmerged', ['reference' => $primary->reference]);
+            $this->log($primary, $actor, 'duplicate_removed', ['reference' => $duplicate->reference]);
+        });
+
+        $this->changeStatus($duplicate, TicketStatus::Open, $actor);
     }
 
     /**
@@ -269,6 +356,31 @@ class TicketManager
         return $stats;
     }
 
+    /**
+     * Re-time open tickets after the office hours or holidays change, so deadlines
+     * reflect the new calendar. Tickets that already breached keep their deadline,
+     * since the breach has been recorded. Returns how many tickets moved.
+     */
+    public function recalculateOpenDueDates(): int
+    {
+        $moved = 0;
+
+        Ticket::query()
+            ->unresolved()
+            ->whereNull('resolution_breached_at')
+            ->lazyById()
+            ->each(function (Ticket $ticket) use (&$moved) {
+                $ticket->recalculateDueDates();
+
+                if ($ticket->isDirty(['response_due_at', 'resolution_due_at'])) {
+                    Ticket::withoutTimestamps(fn () => $ticket->save());
+                    $moved++;
+                }
+            });
+
+        return $moved;
+    }
+
     protected function raiseAlert(Ticket $ticket, string $type): void
     {
         $this->log($ticket, null, $type);
@@ -285,6 +397,19 @@ class TicketManager
     {
         return User::admins()->get()
             ->when($ticket->assignee?->is_active, fn (Collection $users) => $users->push($ticket->assignee))
+            ->unique('id')
+            ->values();
+    }
+
+    /**
+     * Clients following a ticket: its reporter plus the reporters of duplicates merged into it.
+     *
+     * @return Collection<int, User>
+     */
+    protected function clientWatchers(Ticket $ticket): Collection
+    {
+        return collect([$ticket->reporter])
+            ->merge(User::query()->whereIn('id', $ticket->merges()->select('reporter_id'))->get())
             ->unique('id')
             ->values();
     }

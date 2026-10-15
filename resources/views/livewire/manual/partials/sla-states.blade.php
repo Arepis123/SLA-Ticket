@@ -5,6 +5,7 @@
         'breached' => __('The deadline was missed: the ticket is still open past its deadline, the first reply was late, or it was fixed late.'),
         'paused' => __('The ticket is waiting on the client, so the clock is stopped.'),
         'met' => __('The ticket was fixed within the deadline.'),
+        'merged' => __('The ticket reported the same issue as another one and was merged into it. Follow that ticket instead.'),
     ];
 @endphp
 

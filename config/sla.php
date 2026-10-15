@@ -28,6 +28,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Business hours timezone
+    |--------------------------------------------------------------------------
+    |
+    | The timezone your office hours and holidays are written in, for example
+    | "Asia/Kuala_Lumpur". Leave empty to use the application timezone.
+    |
+    */
+
+    'timezone' => env('SLA_TIMEZONE'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Cron token
     |--------------------------------------------------------------------------
     |

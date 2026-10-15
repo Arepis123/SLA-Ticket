@@ -1,8 +1,17 @@
 <div class="flex max-w-4xl flex-col gap-6">
     <div>
         <flux:heading size="xl" level="1">{{ __('SLA Policies') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('Targets per priority, in hours. The clock runs 24/7 and pauses while a ticket is waiting on the client, resolved or closed.') }}</flux:text>
+        <flux:text class="mt-1">{{ __('Targets per priority, in hours. Each priority\'s clock runs either 24/7 or only during business hours, and always pauses while a ticket is waiting on the client, resolved or closed.') }}</flux:text>
     </div>
+
+    @if (! app(\App\Support\BusinessCalendar::class)->hasHours() && in_array(true, $businessHours, true))
+        <flux:callout icon="exclamation-triangle" color="amber">
+            <flux:callout.text>
+                {{ __('No business hours are set, so these priorities run 24/7 until you add some.') }}
+                <flux:link :href="route('admin.business-hours')" wire:navigate>{{ __('Set business hours') }}</flux:link>
+            </flux:callout.text>
+        </flux:callout>
+    @endif
 
     <form wire:submit="save" class="flex flex-col gap-6">
         <flux:card class="p-0! overflow-hidden">
@@ -12,6 +21,7 @@
                     <flux:table.column>{{ __('First response (hours)') }}</flux:table.column>
                     <flux:table.column>{{ __('Resolution (hours)') }}</flux:table.column>
                     <flux:table.column>{{ __('Equals') }}</flux:table.column>
+                    <flux:table.column>{{ __('Clock') }}</flux:table.column>
                 </flux:table.columns>
                 <flux:table.rows>
                     @foreach (\App\Enums\TicketPriority::cases() as $priority)
@@ -32,6 +42,9 @@
                                 {{ \App\Models\SlaPolicy::formatMinutes((int) round((float) $targets[$priority->value]['response'] * 60)) }}
                                 /
                                 {{ \App\Models\SlaPolicy::formatMinutes((int) round((float) $targets[$priority->value]['resolution'] * 60)) }}
+                            </flux:table.cell>
+                            <flux:table.cell>
+                                <flux:switch wire:model.live="businessHours.{{ $priority->value }}" :label="$businessHours[$priority->value] ? __('Business hours') : __('24/7')" align="left" />
                             </flux:table.cell>
                         </flux:table.row>
                     @endforeach

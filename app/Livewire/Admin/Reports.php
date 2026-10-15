@@ -82,6 +82,7 @@ class Reports extends Component
         return Ticket::query()
             ->with(['company', 'project', 'assignee'])
             ->whereBetween('created_at', $this->period)
+            ->whereNull('merged_into_id') // a duplicate is the same issue, already counted once
             ->when($this->company !== '', fn (Builder $query) => $query->where('company_id', (int) $this->company))
             ->when($this->project !== '', fn (Builder $query) => $query->where('project_id', (int) $this->project))
             ->orderBy('created_at')

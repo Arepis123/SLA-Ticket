@@ -1,5 +1,5 @@
 <flux:callout icon="information-circle" class="mb-4">
-    <flux:callout.text>{{ __('Administrators can do everything in the Support team guide as well. This guide covers the extra Administration pages.') }}</flux:callout.text>
+    <flux:callout.text>{{ __('Administrators can do everything in the Support team guide as well, with one difference: your Tickets page shows every ticket rather than opening on your own queue, and the "Assigned to me" filter is only offered to the support team. This guide covers the extra Administration pages.') }}</flux:callout.text>
 </flux:callout>
 
 <flux:card>
@@ -11,7 +11,7 @@
                 <li><flux:text inline variant="strong">{{ __('Projects') }}</flux:text> — {{ __('add each system you built for that company.') }}</li>
                 <li><flux:text inline variant="strong">{{ __('Users') }}</flux:text> — {{ __('create a Client account for each person at the company who will report bugs.') }}</li>
             </x-manual.steps>
-            <flux:text>{{ __('A client user can only report bugs against their own company\'s systems, and only sees the tickets they reported unless you make them a client admin.') }}</flux:text>
+            <flux:text>{{ __('A client user can only report bugs against their own company\'s systems, and only sees the tickets they reported (plus any ticket one of theirs was merged into) unless you make them a client admin.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('2. Clients')">
@@ -60,7 +60,7 @@
 
             <x-manual.steps bullets class="mt-3">
                 <li>{{ __('Click "Add user". A Client user must be linked to a client company.') }}</li>
-                <li>{{ __('Switch on "Client admin" for the person at a client company who should see every ticket of that company. Other client users only see the tickets they reported themselves.') }}</li>
+                <li>{{ __('Switch on "Client admin" for the person at a client company who should see every ticket of that company. Other client users only see the tickets they reported themselves, plus any ticket one of their reports was merged into.') }}</li>
                 <li>{{ __('Either type a password for them, or tick "Email the user a link to set their own password".') }}</li>
                 <li>{{ __('"Send password reset link" in the "…" menu emails a reset link at any time.') }}</li>
                 <li>{{ __('"Deactivate" blocks sign-in and signs the user out on their next click. Their tickets and replies are kept.') }}</li>
@@ -76,8 +76,19 @@
             <x-manual.steps bullets class="mt-3">
                 <li>{{ __('Enter hours (decimals allowed, for example 0.5 for 30 minutes) and click "Save policies".') }}</li>
                 <li>{{ __('The resolution target must be at least as long as the response target.') }}</li>
-                <li>{{ __('New targets apply to tickets opened afterwards, and to a ticket whose priority is changed. Tickets that are already open keep their current deadlines.') }}</li>
-                <li>{{ __('The clock runs 24/7 and pauses while a ticket is Pending Client, Resolved or Closed.') }}</li>
+                <li>{{ __('New targets apply to tickets opened afterwards, and to a ticket whose priority is changed. Tickets that are already open keep their current deadlines. The same goes for switching a priority\'s Clock.') }}</li>
+                <li>{{ __('Each priority\'s "Clock" is either 24/7 or Business hours. A business-hours clock only runs during the opening hours set under Administration → Business Hours, and never on holidays. A common setup is Critical on 24/7 and everything else on business hours.') }}</li>
+                <li>{{ __('Either clock pauses while a ticket is Pending Client, Resolved or Closed.') }}</li>
+            </x-manual.steps>
+
+            <flux:heading class="mt-4 mb-2">{{ __('Business hours and holidays') }}</flux:heading>
+            <x-manual.steps bullets>
+                <li>{{ __('Open Administration → Business Hours. Switch each day on or off and set its opening and closing time, then click "Save hours".') }}</li>
+                <li>{{ __('Add public holidays with a date and a name. The office counts as closed all day.') }}</li>
+                <li>{{ __('Saving the hours or adding or removing a holiday recalculates the deadlines of open tickets straight away. Tickets that already breached keep their deadline.') }}</li>
+                <li>{{ __('Times are in the timezone shown at the top of the page (SLA_TIMEZONE, below). Check it before you rely on the hours.') }}</li>
+                <li>{{ __('Clients can still report bugs at any time. A ticket on a business-hours priority that arrives at night, at the weekend or on a holiday starts counting when the office next opens; one on a 24/7 priority starts counting straight away.') }}</li>
+                <li>{{ __('Clients choose the severity themselves, so a 24/7 priority is the faster one to pick out of hours. Lower it on the ticket if it was chosen too high; the deadlines are then recalculated on that priority\'s clock.') }}</li>
             </x-manual.steps>
         </flux:accordion.item>
 
@@ -99,7 +110,7 @@
                 <li>{{ __('The Breakdown tabs split the same figures by client, system, priority, assignee and category.') }}</li>
                 <li>{{ __('"Export" downloads the chosen filters either as a PDF report with the company logo in the header, or as a CSV with one row per ticket, ready for Excel.') }}</li>
             </x-manual.steps>
-            <flux:text>{{ __('A ticket counts in the period it was opened in, even if it was resolved later.') }}</flux:text>
+            <flux:text>{{ __('A ticket counts in the period it was opened in, even if it was resolved later. Duplicates merged into another ticket are left out, both from the figures and from the CSV export.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('8. Keeping the system running')">
@@ -133,6 +144,11 @@
                         <flux:table.cell class="font-mono">SLA_AUTO_CLOSE_DAYS</flux:table.cell>
                         <flux:table.cell class="whitespace-normal">{{ __('Days before an unconfirmed resolved ticket is closed. 0 turns this off.') }}</flux:table.cell>
                         <flux:table.cell variant="strong">{{ config('sla.auto_close_days') }}</flux:table.cell>
+                    </flux:table.row>
+                    <flux:table.row>
+                        <flux:table.cell class="font-mono">SLA_TIMEZONE</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Timezone the business hours and holidays are in, for example Asia/Kuala_Lumpur. Empty uses the app timezone.') }}</flux:table.cell>
+                        <flux:table.cell variant="strong">{{ app(\App\Support\BusinessCalendar::class)->timezone() }}</flux:table.cell>
                     </flux:table.row>
                     <flux:table.row>
                         <flux:table.cell class="font-mono">SLA_REFERENCE_PREFIX</flux:table.cell>

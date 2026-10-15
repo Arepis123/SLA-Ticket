@@ -35,10 +35,12 @@
             <flux:heading class="mt-4 mb-2">{{ __('Choosing the right severity') }}</flux:heading>
             @include('livewire.manual.partials.sla-targets')
             <flux:text size="sm" class="mt-2">{{ __('Please choose honestly. The support team may adjust the priority after reviewing your report.') }}</flux:text>
+            <flux:text size="sm" class="mt-2">{{ __('You can report a bug at any time. For a severity counted in business hours, a report sent at night, at the weekend or on a public holiday starts counting when our office next opens.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('4. Following your tickets')">
-            <flux:text>{{ __('"My Tickets" lists the tickets you reported. If you are your company\'s client admin, the page is called "Company Tickets" and lists every ticket reported by anyone in your company, with the reporter\'s name. Use the search box and the filters at the top to narrow the list, and click a column heading to sort.') }}</flux:text>
+            <flux:text>{{ __('"My Tickets" lists the tickets you reported. If you are your company\'s client admin, the page is called "Company Tickets" and lists every ticket reported by anyone in your company, with the reporter\'s name. Use the search box and the filters at the top to narrow the list, and click a column heading to sort. To keep a set of filters, click "Save view" and give it a name.') }}</flux:text>
+            <flux:text class="mt-2">{{ __('If someone else already reported the same problem, our team may merge your ticket into theirs. You will get an email, your ticket closes with a link to the one we are working on, and that ticket appears in your list too. You will receive its updates and can reply on it.') }}</flux:text>
 
             <flux:heading class="mt-4 mb-2">{{ __('Ticket statuses') }}</flux:heading>
             @include('livewire.manual.partials.statuses')
@@ -95,6 +97,7 @@
                 <li>{{ __('When the status of your ticket changes (for example to In Progress, Pending Client or Resolved).') }}</li>
                 <li>{{ __('When the support team replies to your ticket.') }}</li>
                 <li>{{ __('When the support team adds a work log entry to a ticket you reported.') }}</li>
+                <li>{{ __('When your ticket is merged into another report of the same problem. After that, you receive the emails above for that ticket instead.') }}</li>
             </x-manual.steps>
             <flux:text>{{ __('Each email has a button that takes you straight to the ticket.') }}</flux:text>
         </flux:accordion.item>

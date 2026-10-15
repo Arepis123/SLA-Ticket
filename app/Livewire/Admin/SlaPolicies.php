@@ -18,9 +18,20 @@ class SlaPolicies extends Component
      */
     public array $targets = [];
 
+    /**
+     * Whether each priority's clock only runs during business hours, keyed by priority value.
+     *
+     * @var array<string, bool>
+     */
+    public array $businessHours = [];
+
     public function mount(): void
     {
+        $stored = SlaPolicy::query()->get()->mapWithKeys(fn (SlaPolicy $policy) => [$policy->priority->value => $policy->business_hours]);
+
         foreach (TicketPriority::cases() as $priority) {
+            $this->businessHours[$priority->value] = (bool) $stored->get($priority->value, false);
+
             $minutes = SlaPolicy::targetsFor($priority);
 
             $this->targets[$priority->value] = [
@@ -47,6 +58,7 @@ class SlaPolicies extends Component
             SlaPolicy::updateOrCreate(['priority' => $priority], [
                 'response_minutes' => (int) round($this->targets[$priority->value]['response'] * 60),
                 'resolution_minutes' => (int) round($this->targets[$priority->value]['resolution'] * 60),
+                'business_hours' => (bool) ($this->businessHours[$priority->value] ?? false),
             ]);
         }
 

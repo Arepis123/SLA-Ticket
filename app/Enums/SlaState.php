@@ -9,6 +9,7 @@ enum SlaState: string
     case Breached = 'breached';
     case Paused = 'paused';
     case Met = 'met';
+    case Merged = 'merged';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum SlaState: string
             self::Breached => __('Breached'),
             self::Paused => __('Paused'),
             self::Met => __('Met'),
+            self::Merged => __('Merged'),
         };
     }
 
@@ -29,6 +31,7 @@ enum SlaState: string
             self::Breached => 'red',
             self::Paused => 'zinc',
             self::Met => 'emerald',
+            self::Merged => 'zinc',
         };
     }
 
@@ -40,6 +43,7 @@ enum SlaState: string
             self::Breached => 'x-circle',
             self::Paused => 'pause-circle',
             self::Met => 'check-circle',
+            self::Merged => 'arrows-pointing-in',
         };
     }
 }

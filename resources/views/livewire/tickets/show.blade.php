@@ -46,12 +46,29 @@
             </div>
 
             @can('manage', $ticket)
-                @if (! $ticket->assignee_id)
+                @if (! $ticket->assignee_id && ! $ticket->isMerged())
                     <flux:button icon="hand-raised" wire:click="assignToMe">{{ __('Assign to me') }}</flux:button>
                 @endif
             @endcan
         </div>
     </div>
+
+    @if ($ticket->isMerged())
+        <flux:callout icon="arrows-pointing-in" color="zinc">
+            <flux:callout.heading>{{ __('Merged into :reference', ['reference' => $ticket->mergedInto->reference]) }}</flux:callout.heading>
+            <flux:callout.text>
+                {{ __('This report describes the same issue as ":title", so the work continues there. Updates on that ticket are sent to you too.', ['title' => $ticket->mergedInto->title]) }}
+            </flux:callout.text>
+            <x-slot name="actions">
+                <div class="flex flex-wrap gap-2">
+                    <flux:button size="sm" variant="primary" icon-trailing="arrow-right" :href="route('tickets.show', $ticket->mergedInto)" wire:navigate>{{ __('Open original') }}</flux:button>
+                    @can('merge', $ticket)
+                        <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" wire:click="unmerge" wire:confirm="{{ __('Unmerge this ticket? It will reopen and its SLA clock will resume.') }}">{{ __('Unmerge') }}</flux:button>
+                    @endcan
+                </div>
+            </x-slot>
+        </flux:callout>
+    @endif
 
     {{-- Client: verify resolution --}}
     @can('respondToResolution', $ticket)
@@ -301,7 +318,7 @@
         </div>
 
         {{-- Sidebar --}}
-        <div class="flex flex-col gap-6">
+        <div class="flex min-w-0 flex-col gap-6">
             {{-- SLA panel --}}
             <flux:card class="space-y-4">
                 <div class="flex items-center justify-between">
@@ -319,6 +336,12 @@
 
                     @if ($ticket->isPaused() && ! $ticket->status->isFinished())
                         <flux:text size="sm" class="mt-1 flex items-center gap-1"><flux:icon name="pause" variant="micro" /> {{ __('Clock paused while waiting on client') }}</flux:text>
+                    @elseif ($ticket->isOutsideBusinessHours())
+                        <flux:text size="sm" class="mt-1 flex items-center gap-1"><flux:icon name="moon" variant="micro" /> {{ __('Clock stopped outside business hours') }}</flux:text>
+                    @endif
+
+                    @if ($ticket->usesBusinessHours())
+                        <flux:text size="sm" class="mt-1">{{ __('Counted in business hours only.') }}</flux:text>
                     @endif
                 </div>
 
@@ -330,10 +353,11 @@
                         </div>
                     @endforeach
 
-                    @if ($ticket->paused_minutes > 0)
+                    @php($pausedMinutes = $ticket->usesBusinessHours() ? $ticket->paused_business_minutes : $ticket->paused_minutes)
+                    @if ($pausedMinutes > 0)
                         <div class="col-span-2">
                             <flux:text size="sm">{{ __('Time paused') }}</flux:text>
-                            <flux:text variant="strong">{{ \App\Models\SlaPolicy::formatMinutes($ticket->paused_minutes) }}</flux:text>
+                            <flux:text variant="strong">{{ \App\Models\SlaPolicy::formatMinutes($pausedMinutes) }}</flux:text>
                         </div>
                     @endif
                 </div>
@@ -344,6 +368,9 @@
                 <flux:card class="space-y-4">
                     <flux:heading size="lg">{{ __('Manage') }}</flux:heading>
 
+                    @if ($ticket->isMerged())
+                        <flux:text>{{ __('Status, priority and assignee are managed on :reference while this ticket is merged.', ['reference' => $ticket->mergedInto->reference]) }}</flux:text>
+                    @else
                     <flux:select variant="listbox" wire:model.live="status" :label="__('Status')">
                         @foreach (\App\Enums\TicketStatus::cases() as $option)
                             @if (in_array($option, \App\Enums\TicketStatus::staffSelectable(), true) || $option === $ticket->status)
@@ -364,8 +391,32 @@
                             <flux:select.option :value="$member->id">{{ $member->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
+
+                    @can('merge', $ticket)
+                        <flux:modal.trigger name="merge-ticket">
+                            <flux:button icon="arrows-pointing-in" variant="subtle" size="sm" class="w-full">{{ __('Merge into another ticket…') }}</flux:button>
+                        </flux:modal.trigger>
+                    @endcan
+                    @endif
                 </flux:card>
             @endcan
+
+            {{-- Duplicates merged into this ticket --}}
+            @if ($isStaff && $this->duplicates->isNotEmpty())
+                <flux:card class="space-y-3">
+                    <flux:heading size="lg">{{ __('Merged duplicates') }} <flux:badge size="sm" class="ms-1">{{ $this->duplicates->count() }}</flux:badge></flux:heading>
+                    <flux:text size="sm">{{ __('Their reporters get this ticket\'s updates.') }}</flux:text>
+
+                    <div class="space-y-2">
+                        @foreach ($this->duplicates as $duplicate)
+                            <div wire:key="duplicate-{{ $duplicate->id }}" class="min-w-0">
+                                <flux:link :href="route('tickets.show', $duplicate)" variant="ghost" class="font-mono text-sm" wire:navigate>{{ $duplicate->reference }}</flux:link>
+                                <flux:text size="sm" class="truncate">{{ $duplicate->title }} · {{ $duplicate->reporter->name }}</flux:text>
+                            </div>
+                        @endforeach
+                    </div>
+                </flux:card>
+            @endif
 
             {{-- Details --}}
             <flux:card>
@@ -382,4 +433,30 @@
             </flux:card>
         </div>
     </div>
+
+    @can('merge', $ticket)
+        @unless ($ticket->isMerged())
+            <flux:modal name="merge-ticket" class="w-full max-w-lg">
+                <form wire:submit="merge" class="space-y-6">
+                    <div>
+                        <flux:heading size="lg">{{ __('Merge :reference', ['reference' => $ticket->reference]) }}</flux:heading>
+                        <flux:text class="mt-2">{{ __('Use this when another ticket already tracks the same issue. This ticket closes, its SLA clock stops, and its reporter receives the other ticket\'s updates from now on. You can unmerge later.') }}</flux:text>
+                    </div>
+
+                    <flux:select variant="listbox" searchable wire:model="mergeTarget" :label="__('Original ticket')" :placeholder="__('Search :client tickets…', ['client' => $ticket->company->name])">
+                        @forelse ($this->mergeCandidates as $candidate)
+                            <flux:select.option :value="$candidate->id">{{ $candidate->reference }} — {{ \Illuminate\Support\Str::limit($candidate->title, 60) }}</flux:select.option>
+                        @empty
+                            <flux:select.option value="" disabled>{{ __('No other open tickets for this client.') }}</flux:select.option>
+                        @endforelse
+                    </flux:select>
+
+                    <div class="flex justify-end gap-2">
+                        <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                        <flux:button type="submit" variant="primary" icon="arrows-pointing-in">{{ __('Merge') }}</flux:button>
+                    </div>
+                </form>
+            </flux:modal>
+        @endunless
+    @endcan
 </div>

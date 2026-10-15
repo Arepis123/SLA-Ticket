@@ -40,6 +40,9 @@
                     <flux:sidebar.item icon="clock" :href="route('admin.sla-policies')" :current="request()->routeIs('admin.sla-policies')" wire:navigate>
                         {{ __('SLA Policies') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="calendar-days" :href="route('admin.business-hours')" :current="request()->routeIs('admin.business-hours')" wire:navigate>
+                        {{ __('Business Hours') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="chart-bar" :href="route('admin.reports')" :current="request()->routeIs('admin.reports')" wire:navigate>
                         {{ __('Reports') }}
                     </flux:sidebar.item>
