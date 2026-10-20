@@ -12,6 +12,7 @@ use Illuminate\Support\Number;
  * @property int $id
  * @property int $ticket_id
  * @property int|null $ticket_comment_id
+ * @property int|null $ticket_work_log_id
  * @property int $user_id
  * @property string $disk
  * @property string $path
@@ -20,8 +21,9 @@ use Illuminate\Support\Number;
  * @property int $size
  * @property-read Ticket $ticket
  * @property-read TicketComment|null $comment
+ * @property-read TicketWorkLog|null $workLog
  */
-#[Fillable(['ticket_id', 'ticket_comment_id', 'user_id', 'disk', 'path', 'original_name', 'mime_type', 'size'])]
+#[Fillable(['ticket_id', 'ticket_comment_id', 'ticket_work_log_id', 'user_id', 'disk', 'path', 'original_name', 'mime_type', 'size'])]
 class TicketAttachment extends Model
 {
     protected static function booted(): void
@@ -43,6 +45,14 @@ class TicketAttachment extends Model
     public function comment(): BelongsTo
     {
         return $this->belongsTo(TicketComment::class, 'ticket_comment_id');
+    }
+
+    /**
+     * @return BelongsTo<TicketWorkLog, $this>
+     */
+    public function workLog(): BelongsTo
+    {
+        return $this->belongsTo(TicketWorkLog::class, 'ticket_work_log_id');
     }
 
     public function isImage(): bool

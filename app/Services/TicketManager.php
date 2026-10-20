@@ -193,16 +193,20 @@ class TicketManager
     /**
      * Log work done on a ticket. Visible to everyone who can view the ticket.
      * The body is rich text; it is sanitized here since it is later rendered unescaped.
+     *
+     * @param  array<int, UploadedFile>  $files
      */
-    public function logWork(Ticket $ticket, User $author, string $body): TicketWorkLog
+    public function logWork(Ticket $ticket, User $author, string $body, array $files = []): TicketWorkLog
     {
         $body = HtmlSanitizer::clean($body);
 
-        $workLog = DB::transaction(function () use ($ticket, $author, $body) {
+        $workLog = DB::transaction(function () use ($ticket, $author, $body, $files) {
             $workLog = $ticket->workLogs()->create([
                 'user_id' => $author->id,
                 'body' => $body,
             ]);
+
+            $this->storeAttachments($ticket, $author, $files, workLog: $workLog);
 
             $ticket->touch();
 
@@ -415,15 +419,38 @@ class TicketManager
     }
 
     /**
+     * Attachments are deleted one by one so their stored files are removed too.
+     */
+    public function deleteComment(TicketComment $comment): void
+    {
+        DB::transaction(function () use ($comment) {
+            $comment->attachments->each->delete();
+            $comment->delete();
+        });
+    }
+
+    /**
+     * Attachments are deleted one by one so their stored files are removed too.
+     */
+    public function deleteWorkLog(TicketWorkLog $workLog): void
+    {
+        DB::transaction(function () use ($workLog) {
+            $workLog->attachments->each->delete();
+            $workLog->delete();
+        });
+    }
+
+    /**
      * @param  array<int, UploadedFile>  $files
      */
-    protected function storeAttachments(Ticket $ticket, User $user, array $files, ?TicketComment $comment = null): void
+    protected function storeAttachments(Ticket $ticket, User $user, array $files, ?TicketComment $comment = null, ?TicketWorkLog $workLog = null): void
     {
         $disk = config('sla.attachments.disk');
 
         foreach ($files as $file) {
             $ticket->attachments()->create([
                 'ticket_comment_id' => $comment?->id,
+                'ticket_work_log_id' => $workLog?->id,
                 'user_id' => $user->id,
                 'disk' => $disk,
                 'path' => $file->store("tickets/{$ticket->id}", $disk),

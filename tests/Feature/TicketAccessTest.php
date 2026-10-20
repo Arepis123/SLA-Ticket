@@ -195,6 +195,85 @@ class TicketAccessTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_work_log_attachments_are_stored_and_downloadable_by_the_client(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $admin = User::factory()->admin()->create();
+
+        Livewire::actingAs($admin)->test(Show::class, ['ticket' => $ticket])
+            ->set('workLogBody', '<p>Patched the import job</p>')
+            ->set('workLogFiles', [UploadedFile::fake()->create('patch-notes.pdf', 10, 'application/pdf')])
+            ->call('addWorkLog')
+            ->assertHasNoErrors()
+            ->assertSet('workLogFiles', []);
+
+        $workLog = $ticket->workLogs()->with('attachments')->sole();
+        $attachment = $workLog->attachments->sole();
+
+        $this->assertNull($attachment->ticket_comment_id);
+        Storage::disk('local')->assertExists($attachment->path);
+
+        $this->actingAs($ticket->reporter)->get(route('tickets.show', $ticket))->assertSee('patch-notes.pdf');
+        $this->actingAs($ticket->reporter)->get(route('tickets.attachments.show', [$ticket, $attachment]))->assertOk();
+
+        // Work log files stay with their entry, not in the original report's attachments.
+        Livewire::actingAs($admin)->test(Show::class, ['ticket' => $ticket])
+            ->assertCount('ticketAttachments', 0);
+    }
+
+    public function test_staff_can_delete_their_own_reply_and_work_log_with_their_files(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $admin = User::factory()->admin()->create();
+        $manager = app(TicketManager::class);
+
+        $comment = $manager->comment($ticket, $admin, 'Wrong ticket, sorry', files: [UploadedFile::fake()->create('notes.txt', 1)]);
+        $workLog = $manager->logWork($ticket, $admin, '<p>Logged by mistake</p>', [UploadedFile::fake()->create('trace.txt', 1)]);
+        $paths = [$comment->attachments->sole()->path, $workLog->attachments->sole()->path];
+
+        Livewire::actingAs($admin)->test(Show::class, ['ticket' => $ticket])
+            ->call('deleteComment', $comment->id)
+            ->call('deleteWorkLog', $workLog->id)
+            ->assertHasNoErrors();
+
+        $this->assertModelMissing($comment);
+        $this->assertModelMissing($workLog);
+        $this->assertCount(0, $ticket->attachments()->get());
+
+        foreach ($paths as $path) {
+            Storage::disk('local')->assertMissing($path);
+        }
+    }
+
+    public function test_entries_cannot_be_deleted_by_other_staff_or_clients(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $author = User::factory()->admin()->create();
+        $otherStaff = User::factory()->admin()->create();
+        $manager = app(TicketManager::class);
+
+        $comment = $manager->comment($ticket, $author, 'Looking into it');
+        $workLog = $manager->logWork($ticket, $author, '<p>Checked the logs</p>');
+        $clientComment = $manager->comment($ticket, $ticket->reporter, 'Any update?');
+
+        Livewire::actingAs($otherStaff)->test(Show::class, ['ticket' => $ticket])
+            ->call('deleteComment', $comment->id)
+            ->assertForbidden();
+
+        Livewire::actingAs($otherStaff)->test(Show::class, ['ticket' => $ticket])
+            ->call('deleteWorkLog', $workLog->id)
+            ->assertForbidden();
+
+        // Clients cannot delete anything, not even their own replies.
+        Livewire::actingAs($ticket->reporter)->test(Show::class, ['ticket' => $ticket])
+            ->call('deleteComment', $clientComment->id)
+            ->assertForbidden();
+
+        $this->assertModelExists($comment);
+        $this->assertModelExists($workLog);
+        $this->assertModelExists($clientComment);
+    }
+
     public function test_unseen_work_log_entries_are_badged_until_the_client_opens_the_tab(): void
     {
         $ticket = Ticket::factory()->create();

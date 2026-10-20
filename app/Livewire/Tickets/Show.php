@@ -49,6 +49,9 @@ class Show extends Component
     // Work log form
     public string $workLogBody = '';
 
+    /** @var array<int, UploadedFile> */
+    public array $workLogFiles = [];
+
     // Merge form: id of the ticket this one duplicates
     public string $mergeTarget = '';
 
@@ -159,11 +162,13 @@ class Show extends Component
                     }
                 },
             ],
-        ], attributes: ['workLogBody' => __('work log entry')]);
+            'workLogFiles' => ['array', 'max:5'],
+            'workLogFiles.*' => ['file', 'max:'.config('sla.attachments.max_kb'), 'mimes:'.config('sla.attachments.mimes')],
+        ], attributes: ['workLogBody' => __('work log entry'), 'workLogFiles.*' => __('attachment')]);
 
-        $manager->logWork($this->ticket, Auth::user(), $this->workLogBody);
+        $manager->logWork($this->ticket, Auth::user(), $this->workLogBody, $this->workLogFiles);
 
-        $this->reset('workLogBody');
+        $this->reset('workLogBody', 'workLogFiles');
         $this->notify(__('Work log entry added.'));
         $this->refreshTicket();
     }
@@ -191,6 +196,34 @@ class Show extends Component
     {
         unset($this->files[$index]);
         $this->files = array_values($this->files);
+    }
+
+    public function deleteComment(int $commentId, TicketManager $manager): void
+    {
+        $comment = $this->ticket->comments()->findOrFail($commentId);
+
+        Gate::authorize('deleteComment', [$this->ticket, $comment]);
+
+        $manager->deleteComment($comment);
+        $this->notify($comment->is_internal ? __('Internal note deleted.') : __('Reply deleted.'));
+        $this->refreshTicket();
+    }
+
+    public function deleteWorkLog(int $workLogId, TicketManager $manager): void
+    {
+        $workLog = $this->ticket->workLogs()->findOrFail($workLogId);
+
+        Gate::authorize('deleteWorkLog', [$this->ticket, $workLog]);
+
+        $manager->deleteWorkLog($workLog);
+        $this->notify(__('Work log entry deleted.'));
+        $this->refreshTicket();
+    }
+
+    public function removeWorkLogFile(int $index): void
+    {
+        unset($this->workLogFiles[$index]);
+        $this->workLogFiles = array_values($this->workLogFiles);
     }
 
     /**
@@ -322,7 +355,7 @@ class Show extends Component
     #[Computed]
     public function ticketAttachments(): EloquentCollection
     {
-        return $this->ticket->attachments()->whereNull('ticket_comment_id')->get();
+        return $this->ticket->attachments()->whereNull('ticket_comment_id')->whereNull('ticket_work_log_id')->get();
     }
 
     /**
@@ -333,7 +366,7 @@ class Show extends Component
     #[Computed]
     public function workLogs(): EloquentCollection
     {
-        return $this->ticket->workLogs()->with('user')->get();
+        return $this->ticket->workLogs()->with(['user', 'attachments'])->get();
     }
 
     /**

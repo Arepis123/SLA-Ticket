@@ -5,6 +5,8 @@ namespace App\Policies;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
+use App\Models\TicketComment;
+use App\Models\TicketWorkLog;
 use App\Models\User;
 
 class TicketPolicy
@@ -62,6 +64,22 @@ class TicketPolicy
     public function addWorkLog(User $user, Ticket $ticket): bool
     {
         return $user->isStaff() && $this->view($user, $ticket);
+    }
+
+    /**
+     * Staff can delete their own replies and internal notes.
+     */
+    public function deleteComment(User $user, Ticket $ticket, TicketComment $comment): bool
+    {
+        return $user->isStaff() && $comment->ticket_id === $ticket->id && $comment->user_id === $user->id;
+    }
+
+    /**
+     * Staff can delete their own work log entries.
+     */
+    public function deleteWorkLog(User $user, Ticket $ticket, TicketWorkLog $workLog): bool
+    {
+        return $user->isStaff() && $workLog->ticket_id === $ticket->id && $workLog->user_id === $user->id;
     }
 
     /**
