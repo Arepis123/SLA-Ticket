@@ -446,7 +446,7 @@
                                     <flux:card.heading>{{ __('Add work log entry') }}</flux:card.heading>
                                 </flux:card.header>
                                
-                                <flux:editor wire:model="workLogBody" :aria-label="__('Add work log entry')" placeholder="{{ __('Describe the work done…') }}" />
+                                <flux:editor wire:model="workLogBody" toolbar="heading | bold italic underline strike highlight | bullet ordered blockquote | link | align" :aria-label="__('Add work log entry')" placeholder="{{ __('Describe the work done…') }}" />
                                
                                 <flux:card.footer class="space-y-3">
                                     <flux:file-upload wire:model="workLogFiles" multiple>

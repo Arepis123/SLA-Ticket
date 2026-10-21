@@ -57,9 +57,13 @@ if (! $lock->get()) {
 }
 
 try {
-    // Flag breaches first, so any notification it raises is queued before the
+    // Flag breaches and queue reminders first, so any notification raised is queued before the
     // worker below drains the queue.
     $kernel->call('sla:check');
+    echo $kernel->output();
+
+    // Sends only at the configured reminder times; a no-op on other ticks.
+    $kernel->call('tickets:remind', ['--due' => true]);
     echo $kernel->output();
 
     // Booting a worker costs a few seconds even against an empty queue, which

@@ -90,6 +90,8 @@ class ReportsTest extends TestCase
         $csv = base64_decode($component->effects['download']['content']);
 
         $this->assertStringContainsString($ticket->reference, $csv);
+        $this->assertStringContainsString('Reported by', $csv);
+        $this->assertStringContainsString($ticket->reporter->name, $csv);
         $this->assertStringContainsString("'=HYPERLINK", $csv);
         $this->assertStringNotContainsString($old->reference, $csv);
     }
@@ -109,9 +111,9 @@ class ReportsTest extends TestCase
             'system' => null,
             'summary' => Livewire::test(Reports::class)->instance()->summary,
             'breakdowns' => Livewire::test(Reports::class)->instance()->breakdowns,
-            'tickets' => Ticket::query()->with(['company', 'project', 'assignee'])->get(),
+            'tickets' => Ticket::query()->with(['company', 'project', 'reporter', 'assignee'])->get(),
             'generatedBy' => $admin->name,
-        ])->assertSee('Enigmatic Solutions')->assertSee($ticket->reference);
+        ])->assertSee('Enigmatic Solutions')->assertSee($ticket->reference)->assertSee($ticket->reporter->name);
 
         $component = Livewire::actingAs($admin)->test(Reports::class)
             ->call('exportPdf')

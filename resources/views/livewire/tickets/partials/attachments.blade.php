@@ -1,6 +1,6 @@
 <div class="grid gap-2 sm:grid-cols-2">
     @foreach ($attachments as $attachment)
-        @php($url = route('tickets.attachments.show', [$ticket, $attachment]))
+        @php($url = route('tickets.attachments.show', [$ticket, $attachment, $attachment->original_name]))
 
         <flux:file-item
             wire:key="attachment-{{ $attachment->id }}"

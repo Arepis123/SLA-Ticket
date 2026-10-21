@@ -213,12 +213,59 @@ class TicketAccessTest extends TestCase
         $this->assertNull($attachment->ticket_comment_id);
         Storage::disk('local')->assertExists($attachment->path);
 
-        $this->actingAs($ticket->reporter)->get(route('tickets.show', $ticket))->assertSee('patch-notes.pdf');
+        $this->actingAs($ticket->reporter)->get(route('tickets.show', $ticket))
+            ->assertSee("{$ticket->reference}-1.pdf")
+            ->assertDontSee('patch-notes.pdf');
         $this->actingAs($ticket->reporter)->get(route('tickets.attachments.show', [$ticket, $attachment]))->assertOk();
+
+        // The filename in the URL is what browsers use as the tab title for an opened file.
+        $url = route('tickets.attachments.show', [$ticket, $attachment, $attachment->original_name]);
+        $this->assertStringEndsWith("/{$ticket->reference}-1.pdf", $url);
+        $this->actingAs($ticket->reporter)->get(route('tickets.show', $ticket))->assertSee($url, escape: false);
+        $this->actingAs($ticket->reporter)->get($url)->assertOk();
 
         // Work log files stay with their entry, not in the original report's attachments.
         Livewire::actingAs($admin)->test(Show::class, ['ticket' => $ticket])
             ->assertCount('ticketAttachments', 0);
+    }
+
+    public function test_uploads_are_named_after_the_ticket_instead_of_the_uploaders_filename(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $admin = User::factory()->admin()->create();
+        $manager = app(TicketManager::class);
+
+        $first = $manager->comment($ticket, $admin, 'First', files: [
+            UploadedFile::fake()->image('Screenshot 2026-10-19 at 7.39.39 PM.png'),
+            UploadedFile::fake()->create('export.csv', 1, 'text/csv'),
+        ]);
+        $second = $manager->comment($ticket, $admin, 'Second', files: [UploadedFile::fake()->create('notes.txt', 1)]);
+
+        $this->assertSame(
+            ["{$ticket->reference}-1.png", "{$ticket->reference}-2.csv"],
+            $first->attachments->pluck('original_name')->all(),
+        );
+
+        // Deleting an earlier file must not hand its number to the next upload.
+        $manager->deleteComment($second);
+        $third = $manager->comment($ticket, $admin, 'Third', files: [UploadedFile::fake()->create('trace.txt', 1)]);
+
+        $this->assertSame("{$ticket->reference}-3.txt", $third->attachments->sole()->original_name);
+    }
+
+    public function test_rename_command_replaces_existing_uploaders_filenames(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $admin = User::factory()->admin()->create();
+        $comment = app(TicketManager::class)->comment($ticket, $admin, 'Old upload', files: [UploadedFile::fake()->image('error.png')]);
+        $attachment = $comment->attachments->sole();
+        $attachment->update(['original_name' => 'Screenshot 2026-10-19 at 7.39.39 PM.png']);
+
+        $this->artisan('attachments:rename', ['--dry-run' => true])->assertSuccessful();
+        $this->assertSame('Screenshot 2026-10-19 at 7.39.39 PM.png', $attachment->fresh()->original_name);
+
+        $this->artisan('attachments:rename')->assertSuccessful();
+        $this->assertSame("{$ticket->reference}-1.png", $attachment->fresh()->original_name);
     }
 
     public function test_staff_can_delete_their_own_reply_and_work_log_with_their_files(): void

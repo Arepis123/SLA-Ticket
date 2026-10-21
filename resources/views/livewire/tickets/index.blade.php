@@ -5,7 +5,7 @@
             <flux:text class="mt-1">{{ trans_choice(':count ticket|:count tickets', $this->tickets->total()) }}</flux:text>
         </div>
         @can('create', \App\Models\Ticket::class)
-            <flux:button variant="primary" icon="bug-ant" :href="route('tickets.create')" wire:navigate>{{ __('Report a bug') }}</flux:button>
+            <flux:button variant="primary" icon="bug" icon:variant="solid" icon:class="size-4" :href="route('tickets.create')" wire:navigate>{{ __('Report a bug') }}</flux:button>
         @endcan
     </div>
 

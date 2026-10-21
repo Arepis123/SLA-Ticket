@@ -126,6 +126,7 @@
             <tr>
                 <th>{{ __('Reference') }}</th>
                 <th>{{ __('Client') }} / {{ __('System') }}</th>
+                <th>{{ __('Reported by') }}</th>
                 <th>{{ __('Title') }}</th>
                 <th>{{ __('Priority') }}</th>
                 <th>{{ __('Status') }}</th>
@@ -141,6 +142,7 @@
                 <tr>
                     <td>{{ $ticket->reference }}</td>
                     <td>{{ $ticket->company->name }}<br><span class="muted">{{ $ticket->project->name }}</span></td>
+                    <td>{{ $ticket->reporter->name ?? '—' }}</td>
                     <td>{{ Str::limit($ticket->title, 70) }}</td>
                     <td>{{ $ticket->priority->label() }}</td>
                     <td>{{ $ticket->status->label() }}</td>
@@ -151,7 +153,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9" class="num muted">{{ __('No tickets were opened in this period.') }}</td>
+                    <td colspan="10" class="num muted">{{ __('No tickets were opened in this period.') }}</td>
                 </tr>
             @endforelse
         </tbody>

@@ -53,6 +53,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Client reminders
+    |--------------------------------------------------------------------------
+    |
+    | Times of day (24-hour, comma separated) at which clients are emailed a
+    | digest of their tickets that are waiting on them: pending their reply,
+    | or resolved and awaiting confirmation. Read in the business hours
+    | timezone above. Leave empty to disable.
+    |
+    */
+
+    'reminders' => [
+        'times' => array_filter(array_map('trim', explode(',', (string) env('SLA_REMINDER_TIMES', '08:00,14:00')))),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Ticket reference prefix
     |--------------------------------------------------------------------------
     */

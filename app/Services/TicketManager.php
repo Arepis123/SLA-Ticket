@@ -4,10 +4,13 @@ namespace App\Services;
 
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
+use App\Enums\UserRole;
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use App\Models\TicketComment;
 use App\Models\TicketWorkLog;
 use App\Models\User;
+use App\Notifications\ClientTicketsReminder;
 use App\Notifications\NewTicketComment;
 use App\Notifications\NewTicketWorkLog;
 use App\Notifications\SlaAlert;
@@ -17,6 +20,8 @@ use App\Notifications\TicketMerged;
 use App\Notifications\TicketStatusChanged;
 use App\Support\BusinessCalendar;
 use App\Support\HtmlSanitizer;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -361,6 +366,72 @@ class TicketManager
     }
 
     /**
+     * Email each client a digest of their tickets waiting on them. Client admins
+     * get every such ticket of their company, other clients only their own.
+     * Returns how many clients were emailed.
+     */
+    public function sendClientReminders(): int
+    {
+        $tickets = Ticket::query()
+            ->whereIn('status', [TicketStatus::PendingClient, TicketStatus::Resolved])
+            ->whereNull('merged_into_id')
+            ->with('project')
+            ->orderBy('status')
+            ->orderBy('created_at')
+            ->get();
+
+        if ($tickets->isEmpty()) {
+            return 0;
+        }
+
+        $sent = 0;
+
+        User::query()
+            ->where('role', UserRole::Client)
+            ->where('is_active', true)
+            ->whereIn('company_id', $tickets->pluck('company_id')->unique())
+            ->each(function (User $client) use ($tickets, &$sent) {
+                $own = $tickets->filter(fn (Ticket $ticket) => $client->isClientAdmin()
+                    ? $ticket->company_id === $client->company_id
+                    : $ticket->reporter_id === $client->id);
+
+                if ($own->isNotEmpty()) {
+                    $client->notify(new ClientTicketsReminder($own->values()));
+                    $sent++;
+                }
+            });
+
+        return $sent;
+    }
+
+    /**
+     * The reminder slot that should be sent now, or null if none is due. Lets a
+     * cron that ticks every minute send each slot exactly once, and still send it
+     * if the tick that fell on the slot itself was missed.
+     */
+    public function dueReminderSlot(?CarbonInterface $now = null): ?CarbonImmutable
+    {
+        $now = CarbonImmutable::instance($now ?? now())->setTimezone(config('sla.timezone') ?: config('app.timezone'));
+
+        $slot = collect(config('sla.reminders.times'))
+            ->flatMap(fn (string $time) => [
+                $now->setTimeFromTimeString($time)->startOfMinute(),
+                $now->subDay()->setTimeFromTimeString($time)->startOfMinute(),
+            ])
+            ->filter(fn (CarbonImmutable $slot) => $slot->lessThanOrEqualTo($now))
+            ->sortDesc()
+            ->first();
+
+        // Give up on a slot missed by more than this, rather than sending a
+        // morning digest in the afternoon.
+        if (! $slot || $slot->diffInMinutes($now) > 120) {
+            return null;
+        }
+
+        return $slot;
+    }
+
+    /**
      * Re-time open tickets after the office hours or holidays change, so deadlines
      * reflect the new calendar. Tickets that already breached keep their deadline,
      * since the breach has been recorded. Returns how many tickets moved.
@@ -446,15 +517,22 @@ class TicketManager
     protected function storeAttachments(Ticket $ticket, User $user, array $files, ?TicketComment $comment = null, ?TicketWorkLog $workLog = null): void
     {
         $disk = config('sla.attachments.disk');
+        $sequence = TicketAttachment::lastSequence($ticket);
 
         foreach ($files as $file) {
+            $sequence++;
+
             $ticket->attachments()->create([
                 'ticket_comment_id' => $comment?->id,
                 'ticket_work_log_id' => $workLog?->id,
                 'user_id' => $user->id,
                 'disk' => $disk,
                 'path' => $file->store("tickets/{$ticket->id}", $disk),
-                'original_name' => $file->getClientOriginalName(),
+                'original_name' => TicketAttachment::displayName(
+                    $ticket,
+                    $sequence,
+                    TicketAttachment::extensionFor($file->getClientOriginalExtension(), $file->guessExtension()),
+                ),
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize(),
             ]);

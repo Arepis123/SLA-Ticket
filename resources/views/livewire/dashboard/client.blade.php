@@ -4,7 +4,7 @@
             <flux:heading size="xl" level="1">{{ __('Welcome, :name', ['name' => auth()->user()->name]) }}</flux:heading>
             <flux:text class="mt-1">{{ auth()->user()->company?->name }}</flux:text>
         </div>
-        <flux:button variant="primary" icon="bug-ant" :href="route('tickets.create')" wire:navigate>{{ __('Report a bug') }}</flux:button>
+        <flux:button variant="primary" icon="bug" icon:variant="solid" icon:class="size-4" :href="route('tickets.create')" wire:navigate>{{ __('Report a bug') }}</flux:button>
     </div>
 
     @if ($this->stats['pending_client'] > 0)

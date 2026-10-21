@@ -1,7 +1,7 @@
 {{-- Marketing-free summary of what FixWatch does, shown beside the sign-in form. --}}
 @php
     $features = [
-        ['icon' => 'bug-ant', 'label' => __('Report a fault against the system it affects')],
+        ['icon' => 'bug', 'variant' => 'solid', 'class' => 'size-5', 'label' => __('Report a fault against the system it affects')],
         ['icon' => 'clock', 'label' => __('A response and resolution clock on every ticket')],
         ['icon' => 'bell-alert', 'label' => __('Warned at :percent% of the window, before a breach', ['percent' => config('sla.at_risk_threshold')])],
         ['icon' => 'chat-bubble-left-right', 'label' => __('Replies, work logs and files on one timeline')],
@@ -26,7 +26,7 @@
         <ul class="flex flex-col gap-3">
             @foreach ($features as $feature)
                 <li class="flex items-center gap-3">
-                    <flux:icon :icon="$feature['icon']" variant="mini" class="shrink-0 text-neutral-500 dark:text-white/60" />
+                    <flux:icon :icon="$feature['icon']" :variant="$feature['variant'] ?? 'mini'" :class="Arr::toCssClasses(['shrink-0 text-neutral-500 dark:text-white/60', $feature['class'] ?? null])" />
                     <span class="text-sm text-neutral-700 dark:text-white/80">{{ $feature['label'] }}</span>
                 </li>
             @endforeach

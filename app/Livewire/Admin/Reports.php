@@ -80,7 +80,7 @@ class Reports extends Component
     public function tickets(): Collection
     {
         return Ticket::query()
-            ->with(['company', 'project', 'assignee'])
+            ->with(['company', 'project', 'reporter', 'assignee'])
             ->whereBetween('created_at', $this->period)
             ->whereNull('merged_into_id') // a duplicate is the same issue, already counted once
             ->when($this->company !== '', fn (Builder $query) => $query->where('company_id', (int) $this->company))
@@ -213,7 +213,7 @@ class Reports extends Component
             fwrite($output, "\xEF\xBB\xBF");
 
             fputcsv($output, [
-                __('Reference'), __('Client'), __('System'), __('Title'), __('Category'), __('Priority'), __('Status'),
+                __('Reference'), __('Client'), __('Reported by'), __('System'), __('Title'), __('Category'), __('Priority'), __('Status'),
                 __('Assignee'), __('Opened'), __('First response'), __('Response due'), __('Resolved'), __('Resolution due'),
                 __('SLA'), __('Resolution time (minutes)'),
             ], escape: '');
@@ -222,6 +222,7 @@ class Reports extends Component
                 fputcsv($output, array_map($this->csvSafe(...), [
                     $ticket->reference,
                     $ticket->company->name,
+                    $ticket->reporter->name ?? '',
                     $ticket->project->name,
                     $ticket->title,
                     $ticket->category->label(),

@@ -55,6 +55,47 @@ class TicketAttachment extends Model
         return $this->belongsTo(TicketWorkLog::class, 'ticket_work_log_id');
     }
 
+    /**
+     * The name shown and offered on download. The uploader's own filename is
+     * never kept, since names like "Screenshot 2026-10-19 at 7.39.39 PM"
+     * leak when and on what device the file was made.
+     */
+    public static function displayName(Ticket $ticket, int $sequence, string $extension): string
+    {
+        $extension = strtolower($extension);
+
+        return "{$ticket->reference}-{$sequence}".($extension !== '' ? ".{$extension}" : '');
+    }
+
+    /**
+     * Highest sequence already used on the ticket, read back from the names
+     * rather than counted, so deleting an attachment never frees a number up
+     * for reuse.
+     */
+    public static function lastSequence(Ticket $ticket): int
+    {
+        $pattern = '/^'.preg_quote((string) $ticket->reference, '/').'-(\d+)(\.|$)/';
+
+        return (int) $ticket->attachments()
+            ->pluck('original_name')
+            ->map(fn (string $name) => preg_match($pattern, $name, $matches) ? (int) $matches[1] : 0)
+            ->max();
+    }
+
+    /**
+     * Prefers the uploader's extension when it is one we accept (so a .csv
+     * sniffed as text/plain stays .csv), otherwise falls back to the one
+     * guessed from the file's contents.
+     */
+    public static function extensionFor(string $clientExtension, ?string $guessedExtension): string
+    {
+        $allowed = explode(',', config('sla.attachments.mimes'));
+
+        return in_array(strtolower($clientExtension), $allowed, true)
+            ? strtolower($clientExtension)
+            : (string) $guessedExtension;
+    }
+
     public function isImage(): bool
     {
         return str_starts_with((string) $this->mime_type, 'image/');

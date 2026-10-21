@@ -8,15 +8,15 @@ use DOMNode;
 use DOMText;
 
 /**
- * Strips rich-text HTML down to the tags/attributes Flux's default editor
- * toolbar can actually produce. Needed because form input arrives as a plain
+ * Strips rich-text HTML down to the tags/attributes the app's Flux editor
+ * toolbars can actually produce. Needed because form input arrives as a plain
  * string over the wire — nothing guarantees it was produced by the editor's
  * own sanitized output, so it must be cleaned before being stored and later
  * rendered unescaped.
  */
 class HtmlSanitizer
 {
-    private const ALLOWED_TAGS = ['p', 'br', 'h1', 'h2', 'h3', 'strong', 'em', 's', 'ul', 'ol', 'li', 'blockquote', 'a'];
+    private const ALLOWED_TAGS = ['p', 'br', 'h1', 'h2', 'h3', 'strong', 'em', 's', 'u', 'mark', 'ul', 'ol', 'li', 'blockquote', 'a'];
 
     private const ALLOWED_TEXT_ALIGN = ['left', 'center', 'right', 'justify'];
 

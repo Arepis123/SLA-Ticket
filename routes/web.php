@@ -15,7 +15,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('tickets', Tickets\Index::class)->name('tickets.index');
     Route::livewire('tickets/create', Tickets\Create::class)->name('tickets.create');
     Route::livewire('tickets/{ticket}', Tickets\Show::class)->name('tickets.show');
-    Route::get('tickets/{ticket}/attachments/{attachment}', TicketAttachmentController::class)->name('tickets.attachments.show');
+    // The trailing filename is ignored; it only gives the browser tab a readable title.
+    Route::get('tickets/{ticket}/attachments/{attachment}/{filename?}', TicketAttachmentController::class)->name('tickets.attachments.show');
 
     Route::livewire('manual', Manual::class)->name('manual');
 
