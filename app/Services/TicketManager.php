@@ -368,13 +368,23 @@ class TicketManager
     /**
      * Email each client a digest of their tickets waiting on them. Client admins
      * get every such ticket of their company, other clients only their own.
-     * Returns how many clients were emailed.
+     * A ticket is included at most once a day per status, so one already sent
+     * in the morning is left out of the afternoon digest unless its status
+     * changed in between. Returns how many clients were emailed.
      */
     public function sendClientReminders(): int
     {
+        // Midnight in the business timezone, converted back to the app timezone
+        // the timestamps are stored in.
+        $startOfToday = now()->setTimezone(config('sla.timezone') ?: config('app.timezone'))->startOfDay()->setTimezone(config('app.timezone'));
+
         $tickets = Ticket::query()
             ->whereIn('status', [TicketStatus::PendingClient, TicketStatus::Resolved])
             ->whereNull('merged_into_id')
+            ->where(fn ($query) => $query
+                ->whereNull('client_reminded_at')
+                ->orWhere('client_reminded_at', '<', $startOfToday)
+                ->orWhereColumn('client_reminded_status', '!=', 'status'))
             ->with('project')
             ->orderBy('status')
             ->orderBy('created_at')
@@ -385,21 +395,30 @@ class TicketManager
         }
 
         $sent = 0;
+        $reminded = collect();
 
         User::query()
             ->where('role', UserRole::Client)
             ->where('is_active', true)
             ->whereIn('company_id', $tickets->pluck('company_id')->unique())
-            ->each(function (User $client) use ($tickets, &$sent) {
+            ->each(function (User $client) use ($tickets, &$sent, $reminded) {
                 $own = $tickets->filter(fn (Ticket $ticket) => $client->isClientAdmin()
                     ? $ticket->company_id === $client->company_id
                     : $ticket->reporter_id === $client->id);
 
                 if ($own->isNotEmpty()) {
                     $client->notify(new ClientTicketsReminder($own->values()));
+                    $reminded->push(...$own->modelKeys());
                     $sent++;
                 }
             });
+
+        // Grouped by status so each ticket records the status it was reminded about.
+        $tickets->whereIn('id', $reminded->unique())
+            ->groupBy(fn (Ticket $ticket) => $ticket->status->value)
+            ->each(fn ($group, string $status) => Ticket::query()
+                ->whereKey($group->modelKeys())
+                ->update(['client_reminded_at' => now(), 'client_reminded_status' => $status]));
 
         return $sent;
     }
@@ -407,7 +426,8 @@ class TicketManager
     /**
      * The reminder slot that should be sent now, or null if none is due. Lets a
      * cron that ticks every minute send each slot exactly once, and still send it
-     * if the tick that fell on the slot itself was missed.
+     * if the tick that fell on the slot itself was missed. Nothing is due on
+     * weekends.
      */
     public function dueReminderSlot(?CarbonInterface $now = null): ?CarbonImmutable
     {
@@ -424,7 +444,7 @@ class TicketManager
 
         // Give up on a slot missed by more than this, rather than sending a
         // morning digest in the afternoon.
-        if (! $slot || $slot->diffInMinutes($now) > 120) {
+        if (! $slot || $slot->isWeekend() || $slot->diffInMinutes($now) > 120) {
             return null;
         }
 

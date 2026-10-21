@@ -64,6 +64,11 @@ class ClientRemindersTest extends TestCase
         $this->assertNull($at('2026-10-21 10:01'));                     // too late; wait for 14:00
         $this->assertSame('2026-10-21 14:00', $at('2026-10-21 14:05'));
 
+        // 2026-10-24 and 25 are a Saturday and Sunday.
+        $this->assertNull($at('2026-10-24 08:00'));
+        $this->assertNull($at('2026-10-25 14:00'));
+        $this->assertSame('2026-10-26 08:00', $at('2026-10-26 08:00'));
+
         // 08:00 in Kuala Lumpur is 00:00 UTC.
         $this->assertSame('2026-10-21 08:00', $manager->dueReminderSlot(CarbonImmutable::parse('2026-10-21 00:00', 'UTC'))?->format('Y-m-d H:i'));
     }
@@ -82,8 +87,49 @@ class ClientRemindersTest extends TestCase
         $this->artisan('tickets:remind --due')->assertSuccessful();
         Notification::assertSentToTimes($ticket->reporter, ClientTicketsReminder::class, 1);
 
+        // Already reminded about this status today, so the afternoon run skips it.
         $this->travelTo(CarbonImmutable::parse('2026-10-21 14:00', 'Asia/Kuala_Lumpur'));
         $this->artisan('tickets:remind --due')->assertSuccessful();
+        Notification::assertSentToTimes($ticket->reporter, ClientTicketsReminder::class, 1);
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-22 08:00', 'Asia/Kuala_Lumpur'));
+        $this->artisan('tickets:remind --due')->assertSuccessful();
         Notification::assertSentToTimes($ticket->reporter, ClientTicketsReminder::class, 2);
+    }
+
+    public function test_a_ticket_is_reminded_again_the_same_day_only_after_its_status_changes(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-21 08:00', 'Asia/Kuala_Lumpur'));
+        $manager = app(TicketManager::class);
+        $pending = Ticket::factory()->create(['status' => TicketStatus::PendingClient]);
+        $resolved = Ticket::factory()->create(['status' => TicketStatus::Resolved]);
+
+        $this->assertSame(2, $manager->sendClientReminders());
+        $this->assertSame(TicketStatus::PendingClient, $pending->fresh()->client_reminded_status);
+
+        // The client replied and the team then resolved it before the afternoon run.
+        $pending->update(['status' => TicketStatus::Resolved]);
+        $this->travelTo(CarbonImmutable::parse('2026-10-21 14:00', 'Asia/Kuala_Lumpur'));
+
+        $this->assertSame(1, $manager->sendClientReminders());
+        Notification::assertSentToTimes($pending->reporter, ClientTicketsReminder::class, 2);
+        Notification::assertSentToTimes($resolved->reporter, ClientTicketsReminder::class, 1);
+        $this->assertSame(TicketStatus::Resolved, $pending->fresh()->client_reminded_status);
+    }
+
+    public function test_the_once_a_day_limit_follows_the_kuala_lumpur_day_not_utc(): void
+    {
+        $manager = app(TicketManager::class);
+        Ticket::factory()->create(['status' => TicketStatus::Resolved]);
+
+        // 01:00 and 07:00 in Kuala Lumpur are the same local day but straddle midnight UTC.
+        $this->travelTo(CarbonImmutable::parse('2026-10-22 01:00', 'Asia/Kuala_Lumpur'));
+        $this->assertSame(1, $manager->sendClientReminders());
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-22 07:00', 'Asia/Kuala_Lumpur'));
+        $this->assertSame(0, $manager->sendClientReminders());
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-23 00:30', 'Asia/Kuala_Lumpur'));
+        $this->assertSame(1, $manager->sendClientReminders());
     }
 }

@@ -45,6 +45,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $response_breached_at
  * @property CarbonImmutable|null $resolution_breached_at
  * @property CarbonImmutable|null $at_risk_notified_at
+ * @property CarbonImmutable|null $client_reminded_at
+ * @property TicketStatus|null $client_reminded_status
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  * @property-read Company $company
@@ -108,6 +110,8 @@ class Ticket extends Model
             'response_breached_at' => 'datetime',
             'resolution_breached_at' => 'datetime',
             'at_risk_notified_at' => 'datetime',
+            'client_reminded_at' => 'datetime',
+            'client_reminded_status' => TicketStatus::class,
         ];
     }
 
