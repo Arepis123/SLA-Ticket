@@ -20,7 +20,7 @@
                     <flux:callout class="mt-4" variant="warning" icon="exclamation-triangle" :text="__('Browser notifications are not set up on this server yet.')" />
                 @else
                     <div class="mt-4" wire:ignore x-data="pushToggle(@js(config('webpush.vapid.public_key')))"
-                        x-on:push-subscriptions-cleared.window="if (state === 'on') state = 'off'">
+                        x-on:push-subscriptions-cleared.window="cleared()">
                         <div x-show="state === 'off'" x-cloak>
                             <flux:button variant="primary" icon="bell" x-on:click="enable()" x-bind:disabled="busy">
                                 {{ __('Enable on this device') }}

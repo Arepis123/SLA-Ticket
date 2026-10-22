@@ -9,7 +9,11 @@ return [
      * These keys must be safely stored and should not change.
      */
     'vapid' => [
-        'subject' => env('VAPID_SUBJECT') ?: env('APP_URL'),
+        // Apple rejects any subject that is not mailto: or https://, so a plain
+        // http APP_URL (such as local development) falls back to the mail sender.
+        'subject' => env('VAPID_SUBJECT') ?: (str_starts_with((string) env('APP_URL'), 'https://')
+            ? env('APP_URL')
+            : 'mailto:'.env('MAIL_FROM_ADDRESS', 'hello@example.com')),
         'public_key' => env('VAPID_PUBLIC_KEY'),
         'private_key' => env('VAPID_PRIVATE_KEY'),
         'pem_file' => env('VAPID_PEM_FILE'),

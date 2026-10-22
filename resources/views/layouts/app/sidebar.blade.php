@@ -117,6 +117,10 @@
 
         {{ $slot }}
 
+        @unless (request()->routeIs('notifications.edit'))
+            <livewire:push-prompt />
+        @endunless
+
         @persist('toast')
             <flux:toast.group>
                 <flux:toast />
