@@ -23,6 +23,8 @@ class ManualTest extends TestCase
             ->assertSee('Client guide')
             ->assertSee('Reporting a bug')
             ->assertSee('Seeing what the team has done')
+            ->assertSee('Daily reminders')
+            ->assertSee('Enable on this device')
             ->assertDontSee('Support team guide')
             ->assertDontSee('Replies and internal notes')
             ->assertDontSee('Administrator guide')
@@ -42,7 +44,8 @@ class ManualTest extends TestCase
             ->assertSee('Reporting a bug')
             ->assertDontSee('Administrator guide')
             ->assertDontSee('SLA_AT_RISK_THRESHOLD')
-            ->assertDontSee('SLA_CRON_TOKEN');
+            ->assertDontSee('SLA_CRON_TOKEN')
+            ->assertDontSee('VAPID_PUBLIC_KEY');
     }
 
     public function test_internal_cannot_request_the_admin_guide_through_the_url(): void
@@ -63,6 +66,8 @@ class ManualTest extends TestCase
             ->assertSee('Client guide')
             ->assertSee('SLA_AT_RISK_THRESHOLD')
             ->assertSee('SLA_CRON_TOKEN')
+            ->assertSee('SLA_REMINDER_TIMES')
+            ->assertSee('VAPID_PUBLIC_KEY')
             ->assertSee('Replies and internal notes')
             ->assertSee('The work log')
             ->assertSee('Reporting a bug');

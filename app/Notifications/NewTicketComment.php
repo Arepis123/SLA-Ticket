@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\TicketComment;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Str;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class NewTicketComment extends TicketNotification
 {
@@ -21,5 +22,12 @@ class NewTicketComment extends TicketNotification
             ->line(__(':name wrote:', ['name' => $this->comment->user->name]))
             ->line('> '.Str::limit($this->comment->body, 500))
             ->action(__('View conversation'), $this->ticketUrl());
+    }
+
+    public function toWebPush(object $notifiable): WebPushMessage
+    {
+        $subject = $this->comment->is_internal ? __('New internal note') : __('New reply on your ticket');
+
+        return $this->basePush($subject, $this->comment->user->name.': '.$this->excerpt($this->comment->body));
     }
 }

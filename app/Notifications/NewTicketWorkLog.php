@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\TicketWorkLog;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Str;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class NewTicketWorkLog extends TicketNotification
 {
@@ -19,5 +20,10 @@ class NewTicketWorkLog extends TicketNotification
             ->line(__(':name logged:', ['name' => $this->workLog->user->name]))
             ->line('> '.Str::limit($this->workLog->body, 500))
             ->action(__('View ticket'), $this->ticketUrl());
+    }
+
+    public function toWebPush(object $notifiable): WebPushMessage
+    {
+        return $this->basePush(__('New work log entry on your ticket'), $this->workLog->user->name.': '.$this->excerpt($this->workLog->body));
     }
 }

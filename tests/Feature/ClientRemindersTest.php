@@ -117,6 +117,23 @@ class ClientRemindersTest extends TestCase
         $this->assertSame(TicketStatus::Resolved, $pending->fresh()->client_reminded_status);
     }
 
+    public function test_a_status_change_email_counts_as_that_days_reminder(): void
+    {
+        $manager = app(TicketManager::class);
+        $ticket = Ticket::factory()->create(['status' => TicketStatus::InProgress]);
+        $staff = User::factory()->internal()->create();
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-21 13:57', 'Asia/Kuala_Lumpur'));
+        $manager->changeStatus($ticket, TicketStatus::Resolved, $staff);
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-21 14:00', 'Asia/Kuala_Lumpur'));
+        $this->assertSame(0, $manager->sendClientReminders());
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-22 08:00', 'Asia/Kuala_Lumpur'));
+        $this->assertSame(1, $manager->sendClientReminders());
+        Notification::assertSentToTimes($ticket->reporter, ClientTicketsReminder::class, 1);
+    }
+
     public function test_the_once_a_day_limit_follows_the_kuala_lumpur_day_not_utc(): void
     {
         $manager = app(TicketManager::class);

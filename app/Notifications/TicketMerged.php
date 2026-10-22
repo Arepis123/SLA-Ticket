@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Ticket;
 use Illuminate\Notifications\Messages\MailMessage;
+use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Sent to the reporter of a duplicate when it is folded into another ticket.
@@ -23,5 +24,15 @@ class TicketMerged extends TicketNotification
             ]))
             ->line(__('You will receive updates on :reference from now on.', ['reference' => $this->primary->reference]))
             ->action(__('Follow :reference', ['reference' => $this->primary->reference]), route('tickets.show', $this->primary));
+    }
+
+    public function toWebPush(object $notifiable): WebPushMessage
+    {
+        return $this->pushMessage(
+            "[{$this->ticket->reference}] ".__('Ticket merged'),
+            __('Merged into :reference. Updates continue there.', ['reference' => $this->primary->reference]),
+            route('tickets.show', $this->primary),
+            $this->primary->reference,
+        );
     }
 }

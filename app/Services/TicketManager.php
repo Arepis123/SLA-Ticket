@@ -100,6 +100,13 @@ class TicketManager
             $ticket->resolution_breached_at = $now;
         }
 
+        // The status email sent below already tells the client, so it stands in for
+        // today's reminder and the digest picks the ticket up from tomorrow.
+        if (in_array($status, [TicketStatus::PendingClient, TicketStatus::Resolved], true)) {
+            $ticket->client_reminded_at = $now;
+            $ticket->client_reminded_status = $status;
+        }
+
         $ticket->status = $status;
         $ticket->save();
 

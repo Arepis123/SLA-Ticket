@@ -2,7 +2,7 @@
     <flux:accordion transition>
         <flux:accordion.item :heading="__('1. Your role')" expanded>
             <flux:text>{{ __('As a member of the support team you can see and work on tickets from every client. You cannot open the Administration pages (Clients, Projects, Users, SLA Policies, Business Hours, Reports); those are for administrators only.') }}</flux:text>
-            <flux:text class="mt-2">{{ __('Click your name at the bottom of the sidebar and choose Settings to manage your profile, password, two-factor authentication, passkeys and appearance. A passkey lets you sign in with your fingerprint, face or device PIN instead of typing a password; add one under Settings → Security.') }}</flux:text>
+            <flux:text class="mt-2">{{ __('Click your name at the bottom of the sidebar and choose Settings to manage your profile, password, two-factor authentication, passkeys, notifications and appearance. A passkey lets you sign in with your fingerprint, face or device PIN instead of typing a password; add one under Settings → Security.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('2. Reading the SLA dashboard')">
@@ -48,15 +48,16 @@
                 <li><flux:text inline variant="strong">{{ __('Reply and change status together') }}</flux:text> — {{ __('use the "Keep status" dropdown in the reply box, for example to ask a question and set "Pending Client" in one step.') }}</li>
             </x-manual.steps>
             <flux:text>{{ __('Send with the button or Ctrl + Enter (Cmd + Enter on a Mac). Files attached to an internal note are hidden from the client too.') }}</flux:text>
+            <flux:text class="mt-2">{{ __('You can delete your own replies and notes with the bin icon next to them, together with their attachments. A client may already have been emailed a copy of a deleted reply, so correct a mistake with a follow-up reply where you can.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('6. The work log')">
             <flux:text>{{ __('Every ticket has a "Work Log" tab next to "Activity". Use it to record what you actually did: what you investigated, what you found, and what you changed.') }}</flux:text>
             <x-manual.steps bullets>
                 <li>{{ __('Only the support team can write entries, but the client can read all of them. Anything you do not want the client to see belongs in an internal note instead.') }}</li>
-                <li>{{ __('The editor handles headings, bold, italic, lists, quotes and links, so longer notes stay readable.') }}</li>
+                <li>{{ __('The editor handles headings, bold, italic, lists, quotes and links, so longer notes stay readable. You can attach up to 5 files of 10 MB each, such as screenshots of the fix.') }}</li>
                 <li>{{ __('The person who reported the ticket is emailed each time you add an entry.') }}</li>
-                <li>{{ __('Entries cannot be edited or deleted afterwards, so the log stays a reliable record of the work.') }}</li>
+                <li>{{ __('Entries cannot be edited. You can delete an entry you wrote yourself, with its attachments, but the client may already have been emailed about it, so only do this for a genuine mistake.') }}</li>
             </x-manual.steps>
             <flux:text>{{ __('In short: the work log is the technical record of the fix, replies are for talking to the client, and internal notes are for anything private to the team.') }}</flux:text>
         </flux:accordion.item>
@@ -92,13 +93,18 @@
             <flux:text>{{ __('Only clients can report a bug, so every ticket comes from the client\'s own account. If a client contacts you by phone or email instead, ask them to sign in and use "Report a Bug". This keeps the report, the deadline and the conversation in one place.') }}</flux:text>
         </flux:accordion.item>
 
-        <flux:accordion.item :heading="__('9. Emails you will receive')">
+        <flux:accordion.item :heading="__('9. Emails and notifications')">
+            <flux:heading class="mb-2">{{ __('Emails you will receive') }}</flux:heading>
             <x-manual.steps bullets>
                 <li>{{ __('When a ticket is assigned to you.') }}</li>
                 <li>{{ __('When a client replies to, confirms or reopens a ticket assigned to you.') }}</li>
                 <li>{{ __('When a colleague adds an internal note to a ticket assigned to you.') }}</li>
                 <li>{{ __('When a ticket assigned to you becomes at risk or breaches its SLA.') }}</li>
             </x-manual.steps>
+            <flux:text>{{ __('You are never notified about your own changes, only about what other people do.') }}</flux:text>
+
+            @include('livewire.manual.partials.browser-notifications')
+            <flux:text class="mt-2">{{ __('SLA alert popups stay on screen until you dismiss them, so a breach is not missed while you are away from your desk.') }}</flux:text>
         </flux:accordion.item>
     </flux:accordion>
 </flux:card>

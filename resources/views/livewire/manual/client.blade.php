@@ -7,6 +7,7 @@
                 <li>{{ __('Forgot your password? Click "Forgot your password?" on the sign-in page to get a reset link by email.') }}</li>
                 <li>{{ __('Click your name at the bottom of the sidebar and choose Settings to change your name, email or password, switch on two-factor authentication, or change between light and dark mode.') }}</li>
                 <li>{{ __('Under Settings → Security you can also add a passkey, which lets you sign in with your fingerprint, face or device PIN instead of typing your password.') }}</li>
+                <li>{{ __('Under Settings → Notifications you can switch on browser popups for ticket updates (see "Emails and notifications" below).') }}</li>
             </x-manual.steps>
         </flux:accordion.item>
 
@@ -63,7 +64,7 @@
             <flux:text>{{ __('An open ticket has two tabs:') }}</flux:text>
             <x-manual.steps bullets>
                 <li><flux:text inline variant="strong">{{ __('Activity') }}</flux:text> — {{ __('the conversation. Every reply and status change, in order. This is the tab you start on.') }}</li>
-                <li><flux:text inline variant="strong">{{ __('Work Log') }}</flux:text> — {{ __('the record the support team keeps of what they investigated and fixed.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Work Log') }}</flux:text> — {{ __('the record the support team keeps of what they investigated and fixed, sometimes with screenshots or files attached.') }}</li>
             </x-manual.steps>
             <flux:text>{{ __('A green number on the "Work Log" tab means the team has added entries you have not read yet. Click the tab to read them and the number disappears. You are emailed about new entries as well, so you will not miss them while you are looking at the Activity tab.') }}</flux:text>
             <flux:text class="mt-2">{{ __('Only the support team can write in the work log. The ticket page refreshes itself every minute, so new replies and entries appear without you reloading.') }}</flux:text>
@@ -92,7 +93,8 @@
             <flux:text class="mt-3">{{ __('A closed ticket cannot be replied to. If the problem comes back later, please report a new bug and mention the old reference number.') }}</flux:text>
         </flux:accordion.item>
 
-        <flux:accordion.item :heading="__('9. Emails you will receive')">
+        <flux:accordion.item :heading="__('9. Emails and notifications')">
+            <flux:heading class="mb-2">{{ __('Emails you will receive') }}</flux:heading>
             <x-manual.steps bullets>
                 <li>{{ __('When the status of your ticket changes (for example to In Progress, Pending Client or Resolved).') }}</li>
                 <li>{{ __('When the support team replies to your ticket.') }}</li>
@@ -100,6 +102,18 @@
                 <li>{{ __('When your ticket is merged into another report of the same problem. After that, you receive the emails above for that ticket instead.') }}</li>
             </x-manual.steps>
             <flux:text>{{ __('Each email has a button that takes you straight to the ticket.') }}</flux:text>
+
+            @if (filled($reminderTimes = config('sla.reminders.times')))
+                <flux:heading class="mt-4 mb-2">{{ __('Daily reminders') }}</flux:heading>
+                <flux:text>{{ __('At :times each day, if any of your tickets are waiting on you, you receive one summary email listing them:', ['times' => \Illuminate\Support\Arr::join($reminderTimes, ', ', ' '.__('and').' ')]) }}</flux:text>
+                <x-manual.steps bullets>
+                    <li>{{ __('Tickets in "Pending Client", where the team needs your reply to continue.') }}</li>
+                    <li>{{ __('Tickets in "Resolved", where the team is waiting for you to confirm the fix or reopen it.') }}</li>
+                </x-manual.steps>
+                <flux:text>{{ __('A ticket only starts appearing the day after it changed to Pending Client or Resolved, because you were already emailed about that change. After that it is included at most once a day. Client admins receive one summary for the whole company. Once you reply, or confirm or reopen the fix, the reminders for that ticket stop.') }}</flux:text>
+            @endif
+
+            @include('livewire.manual.partials.browser-notifications')
         </flux:accordion.item>
     </flux:accordion>
 </flux:card>

@@ -4,7 +4,9 @@ namespace App\Notifications;
 
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class TicketStatusChanged extends TicketNotification
 {
@@ -30,5 +32,20 @@ class TicketStatusChanged extends TicketNotification
         }
 
         return $message->action(__('View ticket'), $this->ticketUrl());
+    }
+
+    public function toWebPush(object $notifiable): WebPushMessage
+    {
+        $body = __(':from → :to', ['from' => $this->from->label(), 'to' => $this->ticket->status->label()]);
+
+        if ($notifiable instanceof User && $notifiable->isClient()) {
+            $body .= match ($this->ticket->status) {
+                TicketStatus::Resolved => ' · '.__('Please verify the fix.'),
+                TicketStatus::PendingClient => ' · '.__('We need more information from you.'),
+                default => '',
+            };
+        }
+
+        return $this->basePush(__('Ticket status updated'), $body);
     }
 }

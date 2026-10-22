@@ -99,7 +99,8 @@
                 <li>{{ __('A client replies to, confirms or reopens any ticket.') }}</li>
                 <li>{{ __('Any ticket becomes at risk (:pct% of its time used) or breaches its first-response or resolution target.', ['pct' => config('sla.at_risk_threshold')]) }}</li>
             </x-manual.steps>
-            <flux:text>{{ __('Each ticket\'s Activity timeline keeps a permanent record of every status, priority and assignee change and every SLA event. The Work Log tab is a second permanent record, written by the support team and readable by the client; see "The work log" in the Support team guide.') }}</flux:text>
+            <flux:text>{{ __('Each of these also arrives as a browser popup if you switch that on under Settings → Notifications; see "Emails and notifications" in the Support team guide. Clients can switch it on for themselves the same way.') }}</flux:text>
+            <flux:text class="mt-2">{{ __('Each ticket\'s Activity timeline keeps a permanent record of every status, priority and assignee change and every SLA event. The Work Log tab is a second permanent record, written by the support team and readable by the client; see "The work log" in the Support team guide.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('7. Reports')">
@@ -114,18 +115,19 @@
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('8. Keeping the system running')">
-            <flux:text>{{ __('Two jobs have to run in the background, otherwise deadlines are never checked and no email is ever sent:') }}</flux:text>
+            <flux:text>{{ __('Three jobs have to run in the background, otherwise deadlines are never checked and no email or browser notification is ever sent:') }}</flux:text>
             <x-manual.steps bullets>
                 <li><flux:text inline variant="strong">{{ __('SLA check') }}</flux:text> — {{ __('flags at-risk and breached tickets, and auto-closes resolved ones.') }}</li>
-                <li><flux:text inline variant="strong">{{ __('Queue worker') }}</flux:text> — {{ __('sends the notification emails that the rest of the system queues up.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Client reminders') }}</flux:text> — {{ __('at the times set in SLA_REMINDER_TIMES, emails each client a summary of their tickets waiting on them (Pending Client, or Resolved and not yet confirmed). A ticket is included at most once a day, starting the day after it changed status, since the status email already told the client that day.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Queue worker') }}</flux:text> — {{ __('sends the emails and browser notifications that the rest of the system queues up. Notifications go out the next time it runs, so run it every minute if you want them to feel instant.') }}</li>
             </x-manual.steps>
             <flux:text>{{ __('There are two ways to run them, depending on what the hosting allows:') }}</flux:text>
             <x-manual.steps>
                 <li>{{ __('If the server can run commands on a schedule, one cron entry calling "artisan schedule:run" every minute does both.') }}</li>
-                <li>{{ __('On hosting that cannot do that (such as a Plesk subscription without command tasks), schedule the address /cron.php instead, with its token, every one to two minutes. It runs exactly the same two jobs.') }}</li>
+                <li>{{ __('On hosting that cannot do that (such as a Plesk subscription without command tasks), schedule the address /cron.php instead, with its token, every one to two minutes. It runs exactly the same three jobs.') }}</li>
             </x-manual.steps>
             <flux:callout icon="exclamation-triangle" class="mt-3">
-                <flux:callout.text>{{ __('Whichever method is used, if it stops running the system looks healthy but goes quiet: no SLA badges change, no tickets auto-close and no email arrives. If people stop receiving email, check this first.') }}</flux:callout.text>
+                <flux:callout.text>{{ __('Whichever method is used, if it stops running the system looks healthy but goes quiet: no SLA badges change, no tickets auto-close, and no email or browser notification arrives. If people stop receiving email, check this first.') }}</flux:callout.text>
             </flux:callout>
             <flux:text class="mt-2">{{ __('These settings live in the server\'s .env file:') }}</flux:text>
             <flux:table class="mt-2">
@@ -151,6 +153,11 @@
                         <flux:table.cell variant="strong">{{ app(\App\Support\BusinessCalendar::class)->timezone() }}</flux:table.cell>
                     </flux:table.row>
                     <flux:table.row>
+                        <flux:table.cell class="font-mono">SLA_REMINDER_TIMES</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Times of day (24-hour, comma separated, in SLA_TIMEZONE) when clients are sent their reminder summary. Empty turns reminders off.') }}</flux:table.cell>
+                        <flux:table.cell variant="strong">{{ implode(', ', config('sla.reminders.times')) ?: __('Off') }}</flux:table.cell>
+                    </flux:table.row>
+                    <flux:table.row>
                         <flux:table.cell class="font-mono">SLA_REFERENCE_PREFIX</flux:table.cell>
                         <flux:table.cell class="whitespace-normal">{{ __('Prefix of new ticket reference numbers.') }}</flux:table.cell>
                         <flux:table.cell variant="strong">{{ config('sla.reference_prefix') }}</flux:table.cell>
@@ -164,6 +171,11 @@
                         <flux:table.cell class="font-mono">SLA_CRON_TOKEN</flux:table.cell>
                         <flux:table.cell class="whitespace-normal">{{ __('Secret that lets the scheduled task reach /cron.php. Empty means that address is switched off.') }}</flux:table.cell>
                         <flux:table.cell variant="strong">{{ config('sla.cron_token') ? __('Set') : __('Not set') }}</flux:table.cell>
+                    </flux:table.row>
+                    <flux:table.row>
+                        <flux:table.cell class="font-mono">VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY</flux:table.cell>
+                        <flux:table.cell class="whitespace-normal">{{ __('Keys that sign browser notifications. Create them once with "php artisan webpush:vapid" and never change them: every device that was switched on stops receiving popups if they do. Empty means browser notifications are off. They also need the site to be served over https.') }}</flux:table.cell>
+                        <flux:table.cell variant="strong">{{ config('webpush.vapid.public_key') && config('webpush.vapid.private_key') ? __('Set') : __('Not set') }}</flux:table.cell>
                     </flux:table.row>
                 </flux:table.rows>
             </flux:table>

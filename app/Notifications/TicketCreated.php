@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use Illuminate\Notifications\Messages\MailMessage;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class TicketCreated extends TicketNotification
 {
@@ -15,5 +16,14 @@ class TicketCreated extends TicketNotification
             ]))
             ->line(__('Response due: :date', ['date' => $this->ticket->response_due_at->format('d M Y H:i')]))
             ->action(__('View ticket'), $this->ticketUrl());
+    }
+
+    public function toWebPush(object $notifiable): WebPushMessage
+    {
+        return $this->basePush(__('New ticket submitted'), __(':title — :name (:company)', [
+            'title' => $this->ticket->title,
+            'name' => $this->ticket->reporter->name,
+            'company' => $this->ticket->company->name,
+        ]));
     }
 }
