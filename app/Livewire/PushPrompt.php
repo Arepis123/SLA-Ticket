@@ -10,7 +10,8 @@ use Livewire\Component;
 /**
  * Card offering browser notifications to users who have not switched them on
  * on any device. The browser then hides it where notifications are blocked or
- * the user said "Not now" (see `pushPrompt` in resources/js/app.js).
+ * the user said "Not now" (see `pushPrompt` in resources/js/app.js), and while
+ * a guided tour is on screen.
  */
 class PushPrompt extends Component
 {

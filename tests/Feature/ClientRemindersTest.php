@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ResolutionType;
 use App\Enums\TicketStatus;
 use App\Models\Project;
 use App\Models\Ticket;
@@ -124,7 +125,7 @@ class ClientRemindersTest extends TestCase
         $staff = User::factory()->internal()->create();
 
         $this->travelTo(CarbonImmutable::parse('2026-10-21 13:57', 'Asia/Kuala_Lumpur'));
-        $manager->changeStatus($ticket, TicketStatus::Resolved, $staff);
+        $manager->changeStatus($ticket, TicketStatus::Resolved, $staff, ResolutionType::CodeChange);
 
         $this->travelTo(CarbonImmutable::parse('2026-10-21 14:00', 'Asia/Kuala_Lumpur'));
         $this->assertSame(0, $manager->sendClientReminders());

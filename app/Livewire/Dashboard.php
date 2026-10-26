@@ -2,9 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Concerns\HasGuidedTour;
 use App\Enums\SlaState;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
+use App\Enums\Tour;
 use App\Models\Ticket;
 use App\Support\Duration;
 use Illuminate\Support\Collection;
@@ -17,6 +19,13 @@ use Livewire\Component;
 #[Title('Dashboard')]
 class Dashboard extends Component
 {
+    use HasGuidedTour;
+
+    protected function guidedTour(): Tour
+    {
+        return Tour::Dashboard;
+    }
+
     /**
      * All unresolved tickets visible to the user (evaluated once per render).
      *

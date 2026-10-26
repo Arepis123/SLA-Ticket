@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ResolutionType;
 use App\Enums\SlaState;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
@@ -143,7 +144,7 @@ class TicketSlaTest extends TestCase
         $ticket = $this->openTicket(TicketPriority::High);
 
         $this->travel(5)->hours();
-        $this->manager->changeStatus($ticket, TicketStatus::Resolved, $this->admin);
+        $this->manager->changeStatus($ticket, TicketStatus::Resolved, $this->admin, ResolutionType::CodeChange);
         $this->assertSame(SlaState::Met, $ticket->fresh()->slaState());
 
         $this->travel(3)->days();
@@ -158,7 +159,7 @@ class TicketSlaTest extends TestCase
     public function test_stale_resolved_tickets_are_closed_automatically(): void
     {
         $ticket = $this->openTicket();
-        $this->manager->changeStatus($ticket, TicketStatus::Resolved, $this->admin);
+        $this->manager->changeStatus($ticket, TicketStatus::Resolved, $this->admin, ResolutionType::CodeChange);
 
         $this->travel(config('sla.auto_close_days') + 1)->days();
         $this->assertSame(1, $this->manager->checkSla()['auto_closed']);

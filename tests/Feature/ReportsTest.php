@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ResolutionType;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Livewire\Admin\Reports;
@@ -46,10 +47,10 @@ class ReportsTest extends TestCase
         $manager = app(TicketManager::class);
 
         $met = Ticket::factory()->priority(TicketPriority::Low)->create();
-        $manager->changeStatus($met, TicketStatus::Resolved, $admin);
+        $manager->changeStatus($met, TicketStatus::Resolved, $admin, ResolutionType::CodeChange);
 
         $breached = Ticket::factory()->priority(TicketPriority::Critical)->create(['created_at' => now()->subDays(3)]);
-        $manager->changeStatus($breached, TicketStatus::Resolved, $admin);
+        $manager->changeStatus($breached, TicketStatus::Resolved, $admin, ResolutionType::CodeChange);
 
         Ticket::factory()->priority(TicketPriority::Low)->create();
         Ticket::factory()->create(['created_at' => now()->subDays(60)]);
@@ -81,6 +82,7 @@ class ReportsTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $ticket = Ticket::factory()->create(['title' => '=HYPERLINK("http://evil.test")']);
+        app(TicketManager::class)->changeStatus($ticket, TicketStatus::Resolved, $admin, ResolutionType::DataFix);
         $old = Ticket::factory()->create(['created_at' => now()->subDays(60)]);
 
         $component = Livewire::actingAs($admin)->test(Reports::class)
@@ -93,6 +95,8 @@ class ReportsTest extends TestCase
         $this->assertStringContainsString('Reported by', $csv);
         $this->assertStringContainsString($ticket->reporter->name, $csv);
         $this->assertStringContainsString("'=HYPERLINK", $csv);
+        $this->assertStringContainsString('Fix type', $csv);
+        $this->assertStringContainsString('Data fix', $csv);
         $this->assertStringNotContainsString($old->reference, $csv);
     }
 
@@ -100,6 +104,7 @@ class ReportsTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $ticket = Ticket::factory()->create();
+        app(TicketManager::class)->changeStatus($ticket, TicketStatus::Resolved, $admin, ResolutionType::CodeChange);
 
         $this->assertFileExists(public_path(config('sla.company.logo')));
 
@@ -113,7 +118,7 @@ class ReportsTest extends TestCase
             'breakdowns' => Livewire::test(Reports::class)->instance()->breakdowns,
             'tickets' => Ticket::query()->with(['company', 'project', 'reporter', 'assignee'])->get(),
             'generatedBy' => $admin->name,
-        ])->assertSee('Enigmatic Solutions')->assertSee($ticket->reference)->assertSee($ticket->reporter->name);
+        ])->assertSee('Enigmatic Solutions')->assertSee($ticket->reference)->assertSee($ticket->reporter->name)->assertSee('Fix type')->assertSee('Code change');
 
         $component = Livewire::actingAs($admin)->test(Reports::class)
             ->call('exportPdf')

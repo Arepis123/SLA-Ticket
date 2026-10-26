@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Tour;
 use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\User;
@@ -33,6 +34,8 @@ class UserFactory extends Factory
             'role' => UserRole::Client,
             'company_id' => null,
             'is_active' => true,
+            // Tours would cover the pages other tests look at; see newToTours().
+            'completed_tours' => collect(Tour::cases())->mapWithKeys(fn (Tour $tour) => [$tour->value => now()->toIso8601String()])->all(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'two_factor_secret' => null,
@@ -62,6 +65,14 @@ class UserFactory extends Factory
     public function clientAdmin(?Company $company = null): static
     {
         return $this->client($company)->state(fn (array $attributes) => ['is_client_admin' => true]);
+    }
+
+    /**
+     * A user who has not seen any guided tour yet, like every newly created account.
+     */
+    public function newToTours(): static
+    {
+        return $this->state(fn (array $attributes) => ['completed_tours' => null]);
     }
 
     public function inactive(): static

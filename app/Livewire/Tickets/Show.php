@@ -2,12 +2,14 @@
 
 namespace App\Livewire\Tickets;
 
+use App\Enums\ResolutionType;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Models\TicketActivity;
 use App\Models\TicketAttachment;
 use App\Models\TicketComment;
+use App\Models\TicketEntryView;
 use App\Models\TicketWorkLog;
 use App\Models\User;
 use App\Services\TicketManager;
@@ -43,6 +45,9 @@ class Show extends Component
 
     public string $replyStatus = '';
 
+    // How the ticket was dealt with; required when staff resolve or close it
+    public string $resolutionType = '';
+
     /** @var array<int, UploadedFile> */
     public array $files = [];
 
@@ -77,12 +82,60 @@ class Show extends Component
 
         $status = TicketStatus::tryFrom($this->status);
 
+        // Resolving or closing needs the fix type first; the modal calls resolve() to finish.
+        if ($status && $status !== $this->ticket->status && $this->ticket->needsResolutionType($status)) {
+            $this->reset('resolutionType');
+            $this->resetValidation('resolutionType');
+            Flux::modal('resolve-ticket')->show();
+
+            return;
+        }
+
         if ($status) {
             $manager->changeStatus($this->ticket, $status, Auth::user());
             $this->notify(__('Status changed to :status.', ['status' => $status->label()]));
         }
 
         $this->refreshTicket();
+    }
+
+    /**
+     * Finish resolving or closing from the status dropdown once the fix type is chosen.
+     */
+    public function resolve(TicketManager $manager): void
+    {
+        Gate::authorize('manage', $this->ticket);
+        $this->ensureNotMerged();
+
+        $status = TicketStatus::tryFrom($this->status);
+
+        if (! $status || ! $this->ticket->needsResolutionType($status)) {
+            $this->cancelResolve();
+
+            return;
+        }
+
+        $this->validate(
+            ['resolutionType' => ['required', Rule::in(array_column(ResolutionType::for($status), 'value'))]],
+            ['resolutionType.required' => __('Choose how this ticket was dealt with.')],
+        );
+
+        $manager->changeStatus($this->ticket, $status, Auth::user(), ResolutionType::from($this->resolutionType));
+
+        Flux::modal('resolve-ticket')->close();
+        $this->reset('resolutionType');
+        $this->notify(__('Status changed to :status.', ['status' => $status->label()]));
+        $this->refreshTicket();
+    }
+
+    /**
+     * The resolve modal was dismissed: put the status dropdown back.
+     */
+    public function cancelResolve(): void
+    {
+        $this->reset('resolutionType');
+        $this->resetValidation('resolutionType');
+        $this->syncPanel();
     }
 
     public function updatedPriority(TicketManager $manager): void
@@ -125,24 +178,33 @@ class Show extends Component
         Gate::authorize('comment', $this->ticket);
 
         $user = Auth::user();
+        $replyStatus = $user->isStaff() ? TicketStatus::tryFrom($this->replyStatus) : null;
+        $needsResolutionType = $replyStatus && $replyStatus !== $this->ticket->status && $this->ticket->needsResolutionType($replyStatus);
 
         $this->validate([
             'body' => ['required', 'string', 'max:10000'],
             'internal' => ['boolean'],
             'replyStatus' => ['nullable', Rule::in($user->isStaff() ? array_column(TicketStatus::staffSelectable(), 'value') : [])],
+            'resolutionType' => [
+                Rule::requiredIf($needsResolutionType),
+                'nullable',
+                Rule::in($replyStatus ? array_column(ResolutionType::for($replyStatus), 'value') : []),
+            ],
             'files' => ['array', 'max:5'],
             'files.*' => ['file', 'max:'.config('sla.attachments.max_kb'), 'mimes:'.config('sla.attachments.mimes')],
-        ], attributes: ['body' => __('message'), 'files.*' => __('attachment')]);
+        ], [
+            'resolutionType.required' => __('Choose how this ticket was dealt with.'),
+        ], ['body' => __('message'), 'files.*' => __('attachment'), 'resolutionType' => __('fix type')]);
 
         $manager->comment($this->ticket, $user, $this->body, $this->internal, $this->files);
 
-        if ($user->isStaff() && ($status = TicketStatus::tryFrom($this->replyStatus))) {
-            $manager->changeStatus($this->ticket->refresh(), $status, $user);
+        if ($replyStatus) {
+            $manager->changeStatus($this->ticket->refresh(), $replyStatus, $user, ResolutionType::tryFrom($this->resolutionType));
         }
 
         $wasInternal = $user->isStaff() && $this->internal;
 
-        $this->reset('body', 'internal', 'replyStatus', 'files');
+        $this->reset('body', 'internal', 'replyStatus', 'resolutionType', 'files');
         $this->notify($wasInternal ? __('Internal note added.') : __('Reply sent.'));
         $this->refreshTicket();
     }
@@ -190,6 +252,28 @@ class Show extends Component
         $this->ticket->markWorkLogReadBy(Auth::user());
 
         unset($this->unseenWorkLogCount);
+    }
+
+    /**
+     * The page reports entries that sat on screen long enough to count as seen
+     * (see entrySeen in resources/js/app.js). Only keys this user could be
+     * shown and has not been recorded for are kept. Skips rendering for the
+     * same reason as markWorkLogsSeen().
+     *
+     * @param  array<int, mixed>  $keys
+     */
+    public function markEntriesSeen(array $keys): void
+    {
+        $this->skipRender();
+
+        $keys = array_values(array_filter(
+            array_slice($keys, 0, 200),
+            fn (mixed $key) => is_string($key) && isset($this->unseenEntryKeys[$key]),
+        ));
+
+        if ($keys !== []) {
+            $this->ticket->markEntriesSeenBy(Auth::user(), $keys);
+        }
     }
 
     public function removeFile(int $index): void
@@ -311,7 +395,7 @@ class Show extends Component
     {
         $this->ticket->refresh();
         $this->syncPanel();
-        unset($this->timeline, $this->ticketAttachments, $this->workLogs, $this->unseenWorkLogCount, $this->duplicates, $this->mergeCandidates);
+        unset($this->timeline, $this->ticketAttachments, $this->workLogs, $this->unseenWorkLogCount, $this->unseenEntryKeys, $this->entrySeenBy, $this->duplicates, $this->mergeCandidates);
     }
 
     protected function notify(string $message): void
@@ -377,6 +461,64 @@ class Show extends Component
     public function unseenWorkLogCount(): int
     {
         return $this->ticket->unreadWorkLogCountFor(Auth::user());
+    }
+
+    /**
+     * Entries on this page the current user has not been recorded as seeing,
+     * keyed like "work_log-12". Their own entries are left out, and nothing is
+     * tracked once the ticket is closed.
+     *
+     * @return array<string, true>
+     */
+    #[Computed]
+    public function unseenEntryKeys(): array
+    {
+        if ($this->ticket->status === TicketStatus::Closed) {
+            return [];
+        }
+
+        $user = Auth::user();
+
+        $seen = $this->ticket->entryViews()
+            ->where('user_id', $user->id)
+            ->get(['entry_type', 'entry_id'])
+            ->mapWithKeys(fn (TicketEntryView $view) => [$view->key() => true]);
+
+        return $this->timeline->toBase()
+            ->merge($this->workLogs)
+            ->reject(fn (TicketComment|TicketActivity|TicketWorkLog $entry) => $entry->user_id === $user->id)
+            ->mapWithKeys(fn (TicketComment|TicketActivity|TicketWorkLog $entry) => [TicketEntryView::keyFor($entry) => true])
+            ->diffKeys($seen)
+            ->all();
+    }
+
+    /**
+     * The data-seen value for an entry the page should watch, or null to leave it alone.
+     */
+    public function seenMarker(TicketComment|TicketActivity|TicketWorkLog $entry): ?string
+    {
+        $key = TicketEntryView::keyFor($entry);
+
+        return isset($this->unseenEntryKeys[$key]) ? $key : null;
+    }
+
+    /**
+     * Who has seen each entry, keyed like unseenEntryKeys. System Admins only.
+     *
+     * @return Collection<string, EloquentCollection<int, TicketEntryView>>
+     */
+    #[Computed]
+    public function entrySeenBy(): Collection
+    {
+        if (Gate::denies('viewEntrySeen', $this->ticket)) {
+            return collect();
+        }
+
+        return $this->ticket->entryViews()
+            ->with('user')
+            ->orderBy('seen_at')
+            ->get()
+            ->groupBy(fn (TicketEntryView $view) => $view->key());
     }
 
     /**

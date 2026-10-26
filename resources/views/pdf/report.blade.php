@@ -133,6 +133,7 @@
                 <th>{{ __('Assignee') }}</th>
                 <th>{{ __('Opened') }}</th>
                 <th>{{ __('Resolved') }}</th>
+                <th>{{ __('Fix type') }}</th>
                 <th>{{ __('SLA') }}</th>
             </tr>
         </thead>
@@ -149,11 +150,12 @@
                     <td>{{ $ticket->assignee->name ?? '—' }}</td>
                     <td>{{ $ticket->created_at->format('d M Y H:i') }}</td>
                     <td>{{ $ticket->resolved_at?->format('d M Y H:i') ?? '—' }}</td>
+                    <td>{{ $ticket->resolution_type?->label() ?? '—' }}</td>
                     <td class="{{ $state->value }}">{{ $state->label() }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10" class="num muted">{{ __('No tickets were opened in this period.') }}</td>
+                    <td colspan="11" class="num muted">{{ __('No tickets were opened in this period.') }}</td>
                 </tr>
             @endforelse
         </tbody>

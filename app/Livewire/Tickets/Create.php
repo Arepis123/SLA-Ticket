@@ -2,13 +2,16 @@
 
 namespace App\Livewire\Tickets;
 
+use App\Concerns\HasGuidedTour;
 use App\Enums\TicketCategory;
 use App\Enums\TicketEnvironment;
 use App\Enums\TicketPriority;
+use App\Enums\Tour;
 use App\Models\Project;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Services\TicketManager;
+use App\Support\TourSample;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -24,7 +27,7 @@ use Livewire\WithFileUploads;
 #[Title('Report a bug')]
 class Create extends Component
 {
-    use WithFileUploads;
+    use HasGuidedTour, WithFileUploads;
 
     public string $project_id = '';
 
@@ -43,10 +46,34 @@ class Create extends Component
     /** @var array<int, UploadedFile> */
     public array $attachments = [];
 
+    protected function guidedTour(): Tour
+    {
+        return Tour::ReportBug;
+    }
+
+    /**
+     * Fill the form with an example report, so the tour shows what a helpful one looks like.
+     */
+    protected function tourStarted(): void
+    {
+        $this->fill(TourSample::bugReport((string) $this->projects->first()?->id));
+    }
+
+    protected function tourEnded(): void
+    {
+        $this->reset('project_id', 'title', 'category', 'priority', 'environment', 'description', 'steps_to_reproduce');
+        $this->selectOnlyProject();
+    }
+
     public function mount(): void
     {
         Gate::authorize('create', Ticket::class);
 
+        $this->selectOnlyProject();
+    }
+
+    protected function selectOnlyProject(): void
+    {
         if ($this->projects->count() === 1) {
             $this->project_id = (string) $this->projects->first()->id;
         }

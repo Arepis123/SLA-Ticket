@@ -1,6 +1,6 @@
 <flux:heading class="mt-4 mb-2">{{ __('Browser notifications') }}</flux:heading>
 <flux:text>{{ __('You can also get a popup on your computer or phone for the same updates, even when the app is not open in a tab. Emails keep coming as well, so you can switch it on or off at any time without missing anything.') }}</flux:text>
-<flux:text class="mt-2">{{ __('Until you switch this on, a card in the bottom corner offers it after you sign in. Click "Enable" and then "Allow" when the browser asks. "Not now" hides the card for :days days. You can also switch it on yourself at any time:', ['days' => 14]) }}</flux:text>
+<flux:text class="mt-2">{{ __('Until you switch this on, a card in the bottom corner offers it after you sign in. Click "Enable" and then "Allow" when the browser asks. "Not now" hides the card for :days days, and so does turning notifications off in Settings. You can also switch it on yourself at any time:', ['days' => 14]) }}</flux:text>
 <x-manual.steps>
     <li>{{ __('Click your name at the bottom of the sidebar, choose Settings, then Notifications.') }}</li>
     <li>{{ __('Click "Enable on this device" and choose "Allow" when the browser asks.') }}</li>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ResolutionType;
 use App\Enums\TicketStatus;
 use App\Livewire\Admin\Users;
 use App\Livewire\Tickets\Create;
@@ -379,7 +380,7 @@ class TicketAccessTest extends TestCase
     {
         $ticket = Ticket::factory()->create();
         $admin = User::factory()->admin()->create();
-        app(TicketManager::class)->changeStatus($ticket, TicketStatus::Resolved, $admin);
+        app(TicketManager::class)->changeStatus($ticket, TicketStatus::Resolved, $admin, ResolutionType::CodeChange);
 
         Livewire::actingAs($ticket->reporter)->test(Show::class, ['ticket' => $ticket->fresh()])
             ->call('reopen')
@@ -390,7 +391,7 @@ class TicketAccessTest extends TestCase
 
         $this->assertSame(TicketStatus::Reopened, $ticket->fresh()->status);
 
-        app(TicketManager::class)->changeStatus($ticket->fresh(), TicketStatus::Resolved, $admin);
+        app(TicketManager::class)->changeStatus($ticket->fresh(), TicketStatus::Resolved, $admin, ResolutionType::CodeChange);
 
         Livewire::actingAs($ticket->reporter)->test(Show::class, ['ticket' => $ticket->fresh()])
             ->call('confirmFix');

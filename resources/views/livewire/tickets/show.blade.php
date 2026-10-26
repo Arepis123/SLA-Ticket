@@ -15,6 +15,7 @@
         __('Environment') => $ticket->environment->label(),
         __('Reporter') => $ticket->reporter->name,
         __('Assignee') => $ticket->assignee?->name ?? __('Unassigned'),
+        __('Fix type') => $ticket->resolution_type?->label(),
         __('Opened') => $ticket->created_at->format('d M Y, H:i'),
         __('Last update') => $ticket->updated_at->diffForHumans(),
     ]);
@@ -222,6 +223,8 @@
                 @endif
             </flux:card>
 
+            {{-- Reports entries that stay on screen long enough to count as seen. --}}
+            <div x-data="entrySeen">
             <flux:tab.group>
                 <flux:tabs>
                     <flux:tab name="activity">{{ __('Activity') }}</flux:tab>
@@ -251,7 +254,7 @@
                 <flux:timeline>
                     @foreach ($this->timeline as $item)
                         @if ($item instanceof \App\Models\TicketComment)
-                            <flux:timeline.item wire:key="comment-{{ $item->id }}" data-entry="deleteComment-{{ $item->id }}" align="baseline">
+                            <flux:timeline.item wire:key="comment-{{ $item->id }}" data-entry="deleteComment-{{ $item->id }}" :data-seen="$this->seenMarker($item)" align="baseline">
                                 <flux:timeline.indicator >
                                     <flux:avatar size="sm" circle class="text-xs after:hidden" :name="$item->user->name" :color="$item->user->isStaff() ? 'sky' : null" />                                    
                                 </flux:timeline.indicator>
@@ -268,6 +271,7 @@
                                         <flux:tooltip :content="$item->created_at->format('d M Y H:i')">
                                             <flux:text>{{ $item->created_at->diffForHumans() }}</flux:text>
                                         </flux:tooltip>
+                                        @include('livewire.tickets.partials.seen-by', ['entry' => $item])
                                         @can('deleteComment', [$ticket, $item])
                                             <flux:button
                                                 size="xs"
@@ -298,7 +302,7 @@
                                 </flux:timeline.content>
                             </flux:timeline.item>
                         @else
-                            <flux:timeline.item wire:key="activity-{{ $item->id }}">
+                            <flux:timeline.item wire:key="activity-{{ $item->id }}" :data-seen="$this->seenMarker($item)">
                                 <flux:timeline.indicator :color="$item->type === 'at_risk' ? 'amber' : ($item->isSlaEvent() ? 'red' : null)">
                                     <flux:icon size="xs" :name="$item->icon()" variant="micro" />
                                 </flux:timeline.indicator>
@@ -312,6 +316,7 @@
                                         <flux:tooltip :content="$item->created_at->format('d M Y H:i')">
                                             <flux:text>· {{ $item->created_at->diffForHumans() }}</flux:text>
                                         </flux:tooltip>
+                                        @include('livewire.tickets.partials.seen-by', ['entry' => $item])
                                     </div>
                                     
                                 </flux:timeline.content>
@@ -362,6 +367,23 @@
 
                         <flux:card.footer class="space-y-3">
                             @if ($isStaff)
+                                {{-- Closing a ticket that was already resolved keeps its fix type, so only ask when it has none. --}}
+                                <div
+                                    x-show="$wire.replyStatus === 'resolved' || ($wire.replyStatus === 'closed' && @js($ticket->needsResolutionType(\App\Enums\TicketStatus::Closed)))"
+                                    x-cloak
+                                >
+                                    <flux:radio.group wire:model="resolutionType" variant="cards" :label="__('How was this ticket dealt with?')" class="max-sm:flex-col">
+                                        @foreach (\App\Enums\ResolutionType::cases() as $type)
+                                            @if ($type === \App\Enums\ResolutionType::NotRelated)
+                                                {{-- Only closing can be "not related"; resolving means something was fixed. --}}
+                                                <flux:radio :value="$type->value" :label="$type->label()" :description="$type->description()" x-show="$wire.replyStatus === 'closed'" />
+                                            @else
+                                                <flux:radio :value="$type->value" :label="$type->label()" :description="$type->description()" />
+                                            @endif
+                                        @endforeach
+                                    </flux:radio.group>
+                                </div>
+
                                 <flux:switch wire:model.live="internal" :label="__('Internal note')" :description="__('Only your team can see internal notes.')" align="left" />
                             @endif
 
@@ -398,7 +420,7 @@
                 <flux:tab.panel name="work-log" class="space-y-4">
                     <flux:timeline>
                         @foreach ($this->workLogs as $log)
-                            <flux:timeline.item wire:key="work-log-{{ $log->id }}" data-entry="deleteWorkLog-{{ $log->id }}" align="baseline">
+                            <flux:timeline.item wire:key="work-log-{{ $log->id }}" data-entry="deleteWorkLog-{{ $log->id }}" :data-seen="$this->seenMarker($log)" align="baseline">
                                 <flux:timeline.indicator variant="bare">
                                     <flux:avatar size="sm" circle class="text-xs after:hidden" :name="$log->user->name" color="violet" />
                                 </flux:timeline.indicator>
@@ -409,6 +431,7 @@
                                         <flux:tooltip :content="$log->created_at->format('d M Y H:i')">
                                             <flux:text>{{ $log->created_at->diffForHumans() }}</flux:text>
                                         </flux:tooltip>
+                                        @include('livewire.tickets.partials.seen-by', ['entry' => $log])
                                         @can('deleteWorkLog', [$ticket, $log])
                                             <flux:button
                                                 size="xs"
@@ -479,6 +502,7 @@
                     @endcan
                 </flux:tab.panel>
             </flux:tab.group>
+            </div>
         </div>
 
         {{-- Sidebar --}}
@@ -622,6 +646,29 @@
                 </form>
             </flux:modal>
         @endunless
+    @endcan
+
+    @can('manage', $ticket)
+        <flux:modal name="resolve-ticket" class="w-full max-w-lg" x-on:close="$wire.cancelResolve()">
+            @php($closing = $status === \App\Enums\TicketStatus::Closed->value)
+            <form wire:submit="resolve" class="space-y-6">
+                <div>
+                    <flux:heading size="lg">{{ $closing ? __('Close :reference', ['reference' => $ticket->reference]) : __('Resolve :reference', ['reference' => $ticket->reference]) }}</flux:heading>
+                    <flux:text class="mt-2">{{ $closing ? __('Tell us how this ticket was dealt with before closing it.') : __('Tell us how the issue was fixed before marking it resolved.') }}</flux:text>
+                </div>
+
+                <flux:radio.group wire:model="resolutionType" variant="cards" :label="__('How was this ticket dealt with?')" class="flex-col">
+                    @foreach (\App\Enums\ResolutionType::for($closing ? \App\Enums\TicketStatus::Closed : \App\Enums\TicketStatus::Resolved) as $type)
+                        <flux:radio :value="$type->value" :label="$type->label()" :description="$type->description()" />
+                    @endforeach
+                </flux:radio.group>
+
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                    <flux:button type="submit" variant="primary" :icon="$closing ? 'lock-closed' : 'check-circle'">{{ $closing ? __('Close ticket') : __('Mark resolved') }}</flux:button>
+                </div>
+            </form>
+        </flux:modal>
     @endcan
 
     <flux:modal name="confirm-delete" class="w-full max-w-md">

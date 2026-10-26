@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ResolutionType;
 use App\Enums\SlaState;
 use App\Enums\TicketCategory;
 use App\Enums\TicketEnvironment;
@@ -38,6 +39,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $resolution_due_at
  * @property CarbonImmutable|null $first_responded_at
  * @property CarbonImmutable|null $resolved_at
+ * @property ResolutionType|null $resolution_type
  * @property CarbonImmutable|null $closed_at
  * @property CarbonImmutable|null $paused_at
  * @property int $paused_minutes
@@ -103,6 +105,7 @@ class Ticket extends Model
             'resolution_due_at' => 'datetime',
             'first_responded_at' => 'datetime',
             'resolved_at' => 'datetime',
+            'resolution_type' => ResolutionType::class,
             'closed_at' => 'datetime',
             'paused_at' => 'datetime',
             'paused_minutes' => 'integer',
@@ -113,6 +116,16 @@ class Ticket extends Model
             'client_reminded_at' => 'datetime',
             'client_reminded_status' => TicketStatus::class,
         ];
+    }
+
+    /**
+     * Whether staff must say how the ticket was dealt with before moving it to
+     * $status. Closing a ticket that was already resolved keeps its fix type.
+     */
+    public function needsResolutionType(TicketStatus $status): bool
+    {
+        return $status === TicketStatus::Resolved
+            || ($status === TicketStatus::Closed && $this->resolution_type === null);
     }
 
     /**
@@ -210,6 +223,41 @@ class Ticket extends Model
     public function workLogReads(): HasMany
     {
         return $this->hasMany(TicketWorkLogRead::class);
+    }
+
+    /**
+     * @return HasMany<TicketEntryView, $this>
+     */
+    public function entryViews(): HasMany
+    {
+        return $this->hasMany(TicketEntryView::class);
+    }
+
+    /**
+     * Record that the given user has had these entries on screen. Keys look like
+     * "work_log-12" (see TicketEntryView::keyFor); ones already recorded are kept
+     * as they were, so the first sighting and its ticket status stick.
+     *
+     * @param  array<int, string>  $keys
+     */
+    public function markEntriesSeenBy(User $user, array $keys): void
+    {
+        $now = now();
+
+        $rows = array_map(function (string $key) use ($user, $now) {
+            [$type, $id] = explode('-', $key, 2);
+
+            return [
+                'ticket_id' => $this->id,
+                'user_id' => $user->id,
+                'entry_type' => $type,
+                'entry_id' => (int) $id,
+                'ticket_status' => $this->status->value,
+                'seen_at' => $now,
+            ];
+        }, array_values($keys));
+
+        TicketEntryView::insertOrIgnore($rows);
     }
 
     /**

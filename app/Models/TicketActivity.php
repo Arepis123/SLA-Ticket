@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ResolutionType;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -46,10 +47,16 @@ class TicketActivity extends Model
 
         return match ($this->type) {
             'created' => __('opened this ticket'),
-            'status_changed' => __('changed status from :from to :to', [
-                'from' => TicketStatus::tryFrom($props['from'] ?? '')?->label() ?? '—',
-                'to' => TicketStatus::tryFrom($props['to'] ?? '')?->label() ?? '—',
-            ]),
+            'status_changed' => isset($props['resolution_type'])
+                ? __('changed status from :from to :to (:fix)', [
+                    'from' => TicketStatus::tryFrom($props['from'] ?? '')?->label() ?? '—',
+                    'to' => TicketStatus::tryFrom($props['to'] ?? '')?->label() ?? '—',
+                    'fix' => ResolutionType::tryFrom($props['resolution_type'])?->label() ?? '—',
+                ])
+                : __('changed status from :from to :to', [
+                    'from' => TicketStatus::tryFrom($props['from'] ?? '')?->label() ?? '—',
+                    'to' => TicketStatus::tryFrom($props['to'] ?? '')?->label() ?? '—',
+                ]),
             'priority_changed' => __('changed priority from :from to :to', [
                 'from' => TicketPriority::tryFrom($props['from'] ?? '')?->label() ?? '—',
                 'to' => TicketPriority::tryFrom($props['to'] ?? '')?->label() ?? '—',

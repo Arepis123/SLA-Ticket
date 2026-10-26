@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ResolutionType;
 use App\Enums\SlaState;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
@@ -94,7 +95,7 @@ class TicketMergeTest extends TestCase
         $this->manager->merge($this->duplicate, $this->primary, $this->admin);
         Notification::fake();
 
-        $this->manager->changeStatus($this->primary->fresh(), TicketStatus::Resolved, $this->admin);
+        $this->manager->changeStatus($this->primary->fresh(), TicketStatus::Resolved, $this->admin, ResolutionType::CodeChange);
         Notification::assertSentTo([$this->alice, $this->bob], TicketStatusChanged::class);
 
         $this->manager->comment($this->primary->fresh(), $this->admin, 'Deployed a fix, please check.');
@@ -129,7 +130,7 @@ class TicketMergeTest extends TestCase
         $this->assertSame('A ticket cannot be merged into itself.', $this->manager->mergeError($this->primary, $this->primary));
         $this->assertSame('Tickets can only be merged within the same client.', $this->manager->mergeError($this->duplicate, $otherClient));
 
-        $this->manager->changeStatus($this->primary, TicketStatus::Closed, $this->admin);
+        $this->manager->changeStatus($this->primary, TicketStatus::Closed, $this->admin, ResolutionType::CodeChange);
         $this->assertStringContainsString('is closed', $this->manager->mergeError($this->duplicate, $this->primary->fresh()));
 
         $this->expectException(InvalidArgumentException::class);
@@ -198,7 +199,7 @@ class TicketMergeTest extends TestCase
 
     public function test_the_page_reports_why_a_merge_was_refused(): void
     {
-        $this->manager->changeStatus($this->primary, TicketStatus::Closed, $this->admin);
+        $this->manager->changeStatus($this->primary, TicketStatus::Closed, $this->admin, ResolutionType::CodeChange);
 
         Livewire::actingAs($this->admin)->test(Show::class, ['ticket' => $this->duplicate])
             ->set('mergeTarget', (string) $this->primary->id)

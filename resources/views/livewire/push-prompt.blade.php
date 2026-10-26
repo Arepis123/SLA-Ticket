@@ -1,6 +1,6 @@
 <div>
     @if ($offer)
-        <div wire:ignore x-data="pushPrompt(@js(config('webpush.vapid.public_key')))" x-show="show" x-cloak x-transition
+        <div wire:ignore x-data="pushPrompt(@js(config('webpush.vapid.public_key')))" x-show="show && ! $store.tour.open" x-cloak x-transition
             class="fixed inset-x-4 bottom-4 z-40 sm:left-auto sm:w-96" role="dialog" aria-labelledby="push-prompt-heading">
             <flux:card class="space-y-3 bg-white shadow-lg dark:bg-zinc-800">
                 <div class="flex items-start gap-3">

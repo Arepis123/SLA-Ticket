@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\ResolutionType;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketComment;
+use App\Models\TicketEntryView;
 use App\Models\TicketWorkLog;
 use App\Models\User;
 use App\Notifications\ClientTicketsReminder;
@@ -56,14 +58,22 @@ class TicketManager
     }
 
     /**
-     * Move a ticket to a new status, pausing or resuming the SLA clock.
+     * Move a ticket to a new status, pausing or resuming the SLA clock. Staff resolving
+     * or closing a ticket must give $resolutionType: how the ticket was dealt with.
+     *
+     * @throws InvalidArgumentException when staff leave out a required resolution type
      */
-    public function changeStatus(Ticket $ticket, TicketStatus $status, User $actor): void
+    public function changeStatus(Ticket $ticket, TicketStatus $status, User $actor, ?ResolutionType $resolutionType = null): void
     {
         $from = $ticket->status;
 
         if ($from === $status) {
             return;
+        }
+
+        if ($actor->isStaff() && $ticket->needsResolutionType($status)
+            && ! in_array($resolutionType, ResolutionType::for($status), true)) {
+            throw new InvalidArgumentException(__('Choose how this ticket was dealt with before marking it :status.', ['status' => $status->label()]));
         }
 
         $now = now();
@@ -88,11 +98,14 @@ class TicketManager
 
         if ($status === TicketStatus::Resolved) {
             $ticket->resolved_at = $now;
+            $ticket->resolution_type = $resolutionType;
         } elseif ($status === TicketStatus::Closed) {
             $ticket->closed_at = $now;
             $ticket->resolved_at ??= $now;
+            $ticket->resolution_type = $resolutionType ?? $ticket->resolution_type;
         } elseif ($status->isActive()) {
             $ticket->resolved_at = null;
+            $ticket->resolution_type = null;
             $ticket->closed_at = null;
         }
 
@@ -110,7 +123,11 @@ class TicketManager
         $ticket->status = $status;
         $ticket->save();
 
-        $this->log($ticket, $actor, 'status_changed', ['from' => $from->value, 'to' => $status->value]);
+        $this->log($ticket, $actor, 'status_changed', array_filter([
+            'from' => $from->value,
+            'to' => $status->value,
+            'resolution_type' => $status->isFinished() ? $resolutionType?->value : null,
+        ]));
 
         Notification::send(
             $this->clientWatchers($ticket)->reject(fn (User $user) => $user->id === $actor->id),
@@ -278,6 +295,8 @@ class TicketManager
                 $duplicate->status = TicketStatus::Closed;
                 $duplicate->closed_at = $now;
                 $duplicate->resolved_at ??= $now;
+                // No work happens on a duplicate; the primary ticket carries the fix.
+                $duplicate->resolution_type = ResolutionType::NotRelated;
             }
 
             $duplicate->save();
@@ -523,6 +542,7 @@ class TicketManager
     {
         DB::transaction(function () use ($comment) {
             $comment->attachments->each->delete();
+            TicketEntryView::forEntry($comment)->delete();
             $comment->delete();
         });
     }
@@ -534,6 +554,7 @@ class TicketManager
     {
         DB::transaction(function () use ($workLog) {
             $workLog->attachments->each->delete();
+            TicketEntryView::forEntry($workLog)->delete();
             $workLog->delete();
         });
     }

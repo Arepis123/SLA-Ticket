@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ResolutionType;
 use App\Enums\TicketCategory;
 use App\Enums\TicketEnvironment;
 use App\Enums\TicketPriority;
@@ -212,7 +213,7 @@ class DemoSeeder extends Seeder
             }
             $manager->logWork($ticket, $assignee, fake()->randomElement($this->fixLogs));
             $manager->comment($ticket, $assignee, 'A fix has been deployed to production. Please verify on your side.');
-            $manager->changeStatus($ticket, TicketStatus::Resolved, $assignee);
+            $manager->changeStatus($ticket, TicketStatus::Resolved, $assignee, fake()->randomElement([ResolutionType::CodeChange, ResolutionType::DataFix]));
 
             if (fake()->boolean(60) && $step(random_int(60, 48 * 60))) {
                 $manager->changeStatus($ticket, TicketStatus::Closed, $client);

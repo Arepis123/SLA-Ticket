@@ -1,3 +1,17 @@
+@if (auth()->user()->isClient())
+    <flux:callout icon="cursor-arrow-rays" class="mb-6">
+        <flux:callout.heading>{{ __('Short on time?') }}</flux:callout.heading>
+        <flux:callout.text>{{ __('Take a one-minute tour instead. Each one points out the main parts of a page, one by one.') }}</flux:callout.text>
+        <x-slot name="actions">
+            <flux:button size="sm" icon="play" :href="route('dashboard', ['tour' => 1])" wire:navigate>{{ __('Dashboard tour') }}</flux:button>
+            <flux:button size="sm" icon="play" :href="route('tickets.index', ['tour' => 1])" wire:navigate>{{ auth()->user()->isClientAdmin() ? __('Company Tickets tour') : __('My Tickets tour') }}</flux:button>
+            @can('create', \App\Models\Ticket::class)
+                <flux:button size="sm" icon="play" :href="route('tickets.create', ['tour' => 1])" wire:navigate>{{ __('Report a Bug tour') }}</flux:button>
+            @endcan
+        </x-slot>
+    </flux:callout>
+@endif
+
 <flux:card>
     <flux:accordion transition>
         <flux:accordion.item :heading="__('1. Signing in and your account')" expanded>

@@ -214,7 +214,7 @@ class Reports extends Component
 
             fputcsv($output, [
                 __('Reference'), __('Client'), __('Reported by'), __('System'), __('Title'), __('Category'), __('Priority'), __('Status'),
-                __('Assignee'), __('Opened'), __('First response'), __('Response due'), __('Resolved'), __('Resolution due'),
+                __('Assignee'), __('Opened'), __('First response'), __('Response due'), __('Resolved'), __('Fix type'), __('Resolution due'),
                 __('SLA'), __('Resolution time (minutes)'),
             ], escape: '');
 
@@ -233,6 +233,7 @@ class Reports extends Component
                     $ticket->first_responded_at?->format('Y-m-d H:i') ?? '',
                     $ticket->response_due_at?->format('Y-m-d H:i') ?? '',
                     $ticket->resolved_at?->format('Y-m-d H:i') ?? '',
+                    $ticket->resolution_type?->label() ?? '',
                     $ticket->resolution_due_at?->format('Y-m-d H:i') ?? '',
                     $ticket->slaState()->label(),
                     (string) ($this->resolutionMinutes($ticket) ?? ''),

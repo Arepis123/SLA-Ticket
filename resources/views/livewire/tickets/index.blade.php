@@ -1,11 +1,21 @@
+@php
+    // During the tour a new client would only see an empty list, so show what one in use looks like.
+    $tickets = $showTour ? \App\Support\TourSample::ticketPage(auth()->user()) : $this->tickets;
+@endphp
+
 <div class="flex flex-col gap-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-            <flux:heading size="xl" level="1">{{ auth()->user()->isClientAdmin() ? __('Company Tickets') : (auth()->user()->isClient() ? __('My Tickets') : __('Tickets')) }}</flux:heading>
-            <flux:text class="mt-1">{{ trans_choice(':count ticket|:count tickets', $this->tickets->total()) }}</flux:text>
+            <flux:heading size="xl" level="1" class="flex flex-wrap items-center gap-2">
+                {{ auth()->user()->isClientAdmin() ? __('Company Tickets') : (auth()->user()->isClient() ? __('My Tickets') : __('Tickets')) }}
+                @if ($showTour)
+                    <flux:badge size="sm" color="amber" icon="sparkles">{{ __('Example data') }}</flux:badge>
+                @endif
+            </flux:heading>
+            <flux:text class="mt-1">{{ trans_choice(':count ticket|:count tickets', $tickets->total()) }}</flux:text>
         </div>
         @can('create', \App\Models\Ticket::class)
-            <flux:button variant="primary" icon="bug" icon:variant="solid" icon:class="size-4" :href="route('tickets.create')" wire:navigate>{{ __('Report a bug') }}</flux:button>
+            <flux:button variant="primary" icon="bug" icon:variant="solid" icon:class="size-4" :href="route('tickets.create')" data-tour="report-bug" wire:navigate>{{ __('Report a bug') }}</flux:button>
         @endcan
     </div>
 
@@ -29,7 +39,7 @@
         </div>
     @endif
 
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" data-tour="ticket-filters">
         <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Search ref or title…')" clearable class="xl:col-span-2" />
 
         <flux:select variant="listbox" wire:model.live="status">
@@ -80,7 +90,7 @@
         @endif
     </div>
 
-    <flux:card class="p-0! overflow-hidden">
+    <flux:card class="p-0! overflow-hidden" data-tour="ticket-list">
         <flux:table class="[&_th:first-child]:ps-4 [&_td:first-child]:ps-4">
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sort === 'reference'" :direction="$direction" wire:click="sortBy('reference')">{{ __('Ref') }}</flux:table.column>
@@ -95,8 +105,8 @@
             </flux:table.columns>
 
             <flux:table.rows>
-                @forelse ($this->tickets as $ticket)
-                    <flux:table.row :key="$ticket->id">
+                @forelse ($tickets as $ticket)
+                    <flux:table.row :key="$ticket->id ?? $ticket->reference" :data-tour="$loop->first ? 'ticket-row' : null">
                         <flux:table.cell class="whitespace-nowrap font-mono text-xs">
                             <flux:link :href="route('tickets.show', $ticket)" variant="subtle" wire:navigate>{{ $ticket->reference }}</flux:link>
                         </flux:table.cell>
@@ -139,8 +149,44 @@
             </flux:table.rows>
         </flux:table>
 
-        <flux:pagination :paginator="$this->tickets" class="px-4 pb-3" />
+        <flux:pagination :paginator="$tickets" class="px-4 pb-3" />
     </flux:card>
+
+    @if ($showTour)
+        <x-tour :steps="[
+            [
+                'title' => auth()->user()->isClientAdmin() ? __('Company Tickets') : __('My Tickets'),
+                'body' => auth()->user()->isClientAdmin()
+                    ? __('Every ticket reported by anyone in your company, newest first. These are example tickets so you can see how the list works; your own appear as soon as the tour ends.')
+                    : __('Every ticket you have reported, newest first. These are example tickets so you can see how the list works; your own appear as soon as the tour ends.'),
+            ],
+            [
+                'target' => 'ticket-filters',
+                'title' => __('Find a ticket'),
+                'body' => __('Search by reference number or title, or narrow the list by status, severity, system or SLA state. Once you have filtered, click Save view to keep those filters one click away.'),
+            ],
+            [
+                'target' => 'ticket-row',
+                'title' => __('Reading a row'),
+                'body' => __('The status shows where a ticket is. Pending Client means we are waiting for your reply. The SLA badge shows whether we are on track to fix it in time.'),
+            ],
+            [
+                'target' => 'ticket-list',
+                'side' => 'top',
+                'title' => __('Sort and open'),
+                'body' => __('Click a column heading to sort the list. Click a reference or title to open the ticket, where you can reply, add files and confirm a fix.'),
+            ],
+            [
+                'target' => 'report-bug',
+                'title' => __('Report another bug'),
+                'body' => __('Found something new? Start a new ticket from here.'),
+            ],
+            [
+                'title' => __('That is the list'),
+                'body' => __('Click Finish to see your own tickets.'),
+            ],
+        ]" />
+    @endif
 
     <flux:modal name="save-view" class="w-full max-w-md">
         <form wire:submit="saveView" class="space-y-6">

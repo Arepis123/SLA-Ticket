@@ -16,7 +16,7 @@
                 <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                     {{ __('Dashboard') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="ticket" :href="route('tickets.index')" :current="request()->routeIs('tickets.index', 'tickets.show')" wire:navigate>
+                <flux:sidebar.item icon="ticket" :href="route('tickets.index')" :current="request()->routeIs('tickets.index', 'tickets.show')" data-tour="nav-tickets" wire:navigate>
                     {{ auth()->user()->isClientAdmin() ? __('Company Tickets') : (auth()->user()->isClient() ? __('My Tickets') : __('Tickets')) }}
                 </flux:sidebar.item>
                 @can('create', \App\Models\Ticket::class)
@@ -52,7 +52,7 @@
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="book-open-text" :href="route('manual')" :current="request()->routeIs('manual')" wire:navigate>
+                <flux:sidebar.item icon="book-open-text" :href="route('manual')" :current="request()->routeIs('manual')" data-tour="nav-manual" wire:navigate>
                     {{ __('User Manual') }}
                 </flux:sidebar.item>
             </flux:sidebar.nav>
@@ -62,7 +62,7 @@
 
         <!-- Mobile User Menu -->
         <flux:header class="lg:hidden">
-            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" data-tour="nav-toggle" />
 
             <flux:spacer />
 
@@ -70,6 +70,7 @@
                 <flux:profile
                     :initials="auth()->user()->initials()"
                     icon-trailing="chevron-down"
+                    data-tour="user-menu-mobile"
                 />
 
                 <flux:menu>

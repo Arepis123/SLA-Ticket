@@ -90,6 +90,14 @@ class TicketPolicy
         return $user->isClient() && $this->view($user, $ticket) && $ticket->status === TicketStatus::Resolved;
     }
 
+    /**
+     * Who has seen each timeline and work log entry is for System Admins only.
+     */
+    public function viewEntrySeen(User $user, Ticket $ticket): bool
+    {
+        return $user->isAdmin();
+    }
+
     public function downloadAttachment(User $user, Ticket $ticket, TicketAttachment $attachment): bool
     {
         return $this->view($user, $ticket)

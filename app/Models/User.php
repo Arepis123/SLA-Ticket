@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Tour;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -29,6 +30,7 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
  * @property int|null $company_id
  * @property bool $is_client_admin
  * @property bool $is_active
+ * @property array<string, string>|null $completed_tours
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -59,6 +61,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'role' => UserRole::class,
             'is_client_admin' => 'boolean',
             'is_active' => 'boolean',
+            'completed_tours' => 'array',
         ];
     }
 
@@ -141,6 +144,28 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     protected function admins(Builder $query): void
     {
         $query->where('role', UserRole::Admin)->where('is_active', true);
+    }
+
+    /**
+     * Whether to walk this user through a page's guided tour: a client who has
+     * not finished that tour yet, or one who asked to see it again.
+     */
+    public function needsTour(Tour $tour, bool $requested = false): bool
+    {
+        return $this->isClient() && ($requested || ! isset($this->completed_tours[$tour->value]));
+    }
+
+    /**
+     * Record that the user finished or skipped a tour. A replay keeps the first date.
+     */
+    public function completeTour(Tour $tour): void
+    {
+        if (isset($this->completed_tours[$tour->value])) {
+            return;
+        }
+
+        $this->completed_tours = [...$this->completed_tours ?? [], $tour->value => now()->toIso8601String()];
+        $this->save();
     }
 
     /**

@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Tickets;
 
+use App\Concerns\HasGuidedTour;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
+use App\Enums\Tour;
 use App\Models\Project;
 use App\Models\SavedView;
 use App\Models\Ticket;
@@ -24,7 +26,7 @@ use Livewire\WithPagination;
 #[Title('Tickets')]
 class Index extends Component
 {
-    use WithPagination;
+    use HasGuidedTour, WithPagination;
 
     #[Url(except: '')]
     public string $search = '';
@@ -67,6 +69,11 @@ class Index extends Component
 
     // Save-view form
     public string $viewName = '';
+
+    protected function guidedTour(): Tour
+    {
+        return Tour::Tickets;
+    }
 
     /**
      * The support team lands on its own queue by default, and can still reach every
