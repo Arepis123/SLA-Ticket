@@ -3,8 +3,10 @@
 namespace App\Livewire\Tickets;
 
 use App\Enums\ResolutionType;
+use App\Enums\TicketCategory;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
+use App\Models\Project;
 use App\Models\Ticket;
 use App\Models\TicketActivity;
 use App\Models\TicketAttachment;
@@ -37,6 +39,11 @@ class Show extends Component
     public string $priority = '';
 
     public string $assignee_id = '';
+
+    // Corrections for when the client filed the ticket under the wrong system or type
+    public string $project_id = '';
+
+    public string $category = '';
 
     // Reply form
     public string $body = '';
@@ -73,6 +80,8 @@ class Show extends Component
         $this->status = $this->ticket->status->value;
         $this->priority = $this->ticket->priority->value;
         $this->assignee_id = (string) $this->ticket->assignee_id;
+        $this->project_id = (string) $this->ticket->project_id;
+        $this->category = $this->ticket->category->value;
     }
 
     public function updatedStatus(TicketManager $manager): void
@@ -161,6 +170,36 @@ class Show extends Component
         $assignee = $this->assignee_id === '' ? null : User::staff()->find((int) $this->assignee_id);
         $manager->assign($this->ticket, $assignee, Auth::user());
         $this->notify($assignee ? __('Assigned to :name.', ['name' => $assignee->name]) : __('Ticket unassigned.'));
+
+        $this->refreshTicket();
+    }
+
+    public function updatedProjectId(TicketManager $manager): void
+    {
+        Gate::authorize('manage', $this->ticket);
+        $this->ensureNotMerged();
+
+        $project = $this->projects->firstWhere('id', (int) $this->project_id);
+
+        if ($project) {
+            $manager->changeProject($this->ticket, $project, Auth::user());
+            $this->notify(__('System changed to :system.', ['system' => $project->name]));
+        }
+
+        $this->refreshTicket();
+    }
+
+    public function updatedCategory(TicketManager $manager): void
+    {
+        Gate::authorize('manage', $this->ticket);
+        $this->ensureNotMerged();
+
+        $category = TicketCategory::tryFrom($this->category);
+
+        if ($category) {
+            $manager->changeCategory($this->ticket, $category, Auth::user());
+            $this->notify(__('Type changed to :type.', ['type' => $category->label()]));
+        }
 
         $this->refreshTicket();
     }
@@ -421,7 +460,7 @@ class Show extends Component
         $activities = $this->ticket->activities()
             ->with('user')
             ->when(! $staff, fn ($query) => $query->whereIn('type', [
-                'created', 'status_changed', 'auto_closed', 'merged_into', 'merged_from', 'unmerged', 'duplicate_removed',
+                'created', 'status_changed', 'project_changed', 'category_changed', 'auto_closed', 'merged_into', 'merged_from', 'unmerged', 'duplicate_removed',
             ]))
             ->get();
 
@@ -549,6 +588,22 @@ class Show extends Component
             ->latest()
             ->limit(200)
             ->get(['id', 'reference', 'title', 'status', 'project_id']);
+    }
+
+    /**
+     * Systems this ticket can be moved to: the client's active ones, plus the
+     * current one so the picker always shows it.
+     *
+     * @return EloquentCollection<int, Project>
+     */
+    #[Computed]
+    public function projects(): EloquentCollection
+    {
+        return Project::query()
+            ->where('company_id', $this->ticket->company_id)
+            ->where(fn ($query) => $query->where('is_active', true)->orWhereKey($this->ticket->project_id))
+            ->orderBy('name')
+            ->get(['id', 'company_id', 'name']);
     }
 
     /**

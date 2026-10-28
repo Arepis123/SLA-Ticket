@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ResolutionType;
+use App\Enums\TicketCategory;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -61,6 +62,14 @@ class TicketActivity extends Model
                 'from' => TicketPriority::tryFrom($props['from'] ?? '')?->label() ?? '—',
                 'to' => TicketPriority::tryFrom($props['to'] ?? '')?->label() ?? '—',
             ]),
+            'project_changed' => __('moved this ticket from system :from to :to', [
+                'from' => $props['from_name'] ?? '—',
+                'to' => $props['to_name'] ?? '—',
+            ]),
+            'category_changed' => __('changed type from :from to :to', [
+                'from' => TicketCategory::tryFrom($props['from'] ?? '')?->label() ?? '—',
+                'to' => TicketCategory::tryFrom($props['to'] ?? '')?->label() ?? '—',
+            ]),
             'assigned' => isset($props['to_name'])
                 ? __('assigned this ticket to :name', ['name' => $props['to_name']])
                 : __('unassigned this ticket'),
@@ -82,6 +91,8 @@ class TicketActivity extends Model
             'created' => 'plus-circle',
             'status_changed' => 'arrow-path',
             'priority_changed' => 'flag',
+            'project_changed' => 'squares-2x2',
+            'category_changed' => 'tag',
             'assigned' => 'user-circle',
             'response_breached', 'resolution_breached' => 'x-circle',
             'at_risk' => 'exclamation-triangle',

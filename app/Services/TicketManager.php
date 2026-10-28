@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Enums\ResolutionType;
+use App\Enums\TicketCategory;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Models\Project;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketComment;
@@ -153,6 +155,50 @@ class TicketManager
         $ticket->save();
 
         $this->log($ticket, $actor, 'priority_changed', ['from' => $from->value, 'to' => $priority->value]);
+    }
+
+    /**
+     * Move a ticket to another system of the same client, e.g. when it was filed
+     * under the wrong one. Names are kept in the log so it still reads correctly
+     * after a system is renamed or deleted.
+     *
+     * @throws InvalidArgumentException when the system belongs to another client
+     */
+    public function changeProject(Ticket $ticket, Project $project, User $actor): void
+    {
+        if ($ticket->project_id === $project->id) {
+            return;
+        }
+
+        if ($project->company_id !== $ticket->company_id) {
+            throw new InvalidArgumentException(__('A ticket can only be moved to a system of the same client.'));
+        }
+
+        $from = $ticket->project;
+
+        $ticket->project()->associate($project);
+        $ticket->save();
+
+        $this->log($ticket, $actor, 'project_changed', [
+            'from' => $from?->id,
+            'from_name' => $from?->name,
+            'to' => $project->id,
+            'to_name' => $project->name,
+        ]);
+    }
+
+    public function changeCategory(Ticket $ticket, TicketCategory $category, User $actor): void
+    {
+        $from = $ticket->category;
+
+        if ($from === $category) {
+            return;
+        }
+
+        $ticket->category = $category;
+        $ticket->save();
+
+        $this->log($ticket, $actor, 'category_changed', ['from' => $from->value, 'to' => $category->value]);
     }
 
     public function assign(Ticket $ticket, ?User $assignee, User $actor): void

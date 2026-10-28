@@ -557,7 +557,7 @@
                     <flux:heading size="lg">{{ __('Manage') }}</flux:heading>
 
                     @if ($ticket->isMerged())
-                        <flux:text>{{ __('Status, priority and assignee are managed on :reference while this ticket is merged.', ['reference' => $ticket->mergedInto->reference]) }}</flux:text>
+                        <flux:text>{{ __('Status, priority, assignee, system and type are managed on :reference while this ticket is merged.', ['reference' => $ticket->mergedInto->reference]) }}</flux:text>
                     @else
                     <flux:select variant="listbox" wire:model.live="status" :label="__('Status')">
                         @foreach (\App\Enums\TicketStatus::cases() as $option)
@@ -577,6 +577,18 @@
                         <flux:select.option value="">{{ __('Unassigned') }}</flux:select.option>
                         @foreach ($this->staff as $member)
                             <flux:select.option :value="$member->id">{{ $member->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    <flux:select variant="listbox" searchable wire:model.live="project_id" :label="__('System')">
+                        @foreach ($this->projects as $project)
+                            <flux:select.option :value="$project->id">{{ $project->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    <flux:select variant="listbox" wire:model.live="category" :label="__('Type')">
+                        @foreach (\App\Enums\TicketCategory::cases() as $option)
+                            <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
                         @endforeach
                     </flux:select>
 
