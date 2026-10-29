@@ -24,5 +24,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('tickets/{ticket}', [Admin\TicketController::class, 'show'])->name('tickets.show');
         Route::get('reports', Admin\ReportController::class)->name('reports');
         Route::get('lookups', Admin\LookupController::class)->name('lookups');
+
+        // Claude calls cost money: a few a minute per admin, on top of the server-wide daily cap.
+        Route::middleware('throttle:6,1')->group(function () {
+            Route::post('tickets/{ticket}/summary', [Admin\AiController::class, 'summary'])->name('tickets.summary');
+            Route::post('ask', [Admin\AiController::class, 'ask'])->name('ask');
+        });
     });
 });

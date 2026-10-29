@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Claude, for the mobile app's ticket summaries and queue questions.
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+        // Summaries generated plus questions asked, across all admins, per day.
+        'daily_limit' => (int) env('AI_DAILY_LIMIT', 30),
+    ],
+
 ];
