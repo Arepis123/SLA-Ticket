@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum TicketCategory: string
+enum TicketCategory: string implements HasLabel
 {
     case Bug = 'bug';
     case Error = 'error';

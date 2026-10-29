@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum SlaState: string
+enum SlaState: string implements HasLabel
 {
     case OnTrack = 'on_track';
     case AtRisk = 'at_risk';

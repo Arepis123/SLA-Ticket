@@ -16,6 +16,13 @@ class EnsureUserIsActive
     {
         $user = $request->user();
 
+        if ($user && ! $user->is_active && $request->is('api/*')) {
+            // A mobile token outlives any session, so revoke them all rather than wait for expiry.
+            $user->tokens()->delete();
+
+            abort(403, __('Your account has been deactivated. Please contact the administrator.'));
+        }
+
         if ($user && ! $user->is_active) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
