@@ -3,6 +3,10 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\Ai\AiBudget;
+use App\Services\Ai\ClaudeLanguageModel;
+use App\Services\Ai\LanguageModel;
+use App\Services\Push\FcmClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
@@ -21,7 +25,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(LanguageModel::class, fn () => new ClaudeLanguageModel(
+            config('services.anthropic.api_key'),
+            config('services.anthropic.model'),
+        ));
+        $this->app->bind(AiBudget::class, fn () => new AiBudget(config('services.anthropic.daily_limit')));
+        $this->app->singleton(FcmClient::class, fn () => new FcmClient(config('services.fcm.credentials')));
     }
 
     /**

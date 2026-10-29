@@ -14,6 +14,11 @@ class SlaAlert extends TicketNotification
         parent::__construct($ticket);
     }
 
+    public function sendsToPhone(): bool
+    {
+        return true;
+    }
+
     public function emailType(): EmailNotification
     {
         return EmailNotification::SlaAlert;

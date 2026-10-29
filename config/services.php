@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    // Firebase Cloud Messaging, for push notifications to the mobile app.
+    // The service account file is downloaded from the Firebase console.
+    'fcm' => [
+        'credentials' => env('FCM_CREDENTIALS', storage_path('app/private/firebase-service-account.json')),
+    ],
+
+    // Claude, for the mobile app's ticket summaries and queue questions.
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+        // Summaries generated plus questions asked, across all admins, per day.
+        'daily_limit' => (int) env('AI_DAILY_LIMIT', 30),
+    ],
+
 ];

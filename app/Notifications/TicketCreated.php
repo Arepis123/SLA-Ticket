@@ -8,6 +8,11 @@ use NotificationChannels\WebPush\WebPushMessage;
 
 class TicketCreated extends TicketNotification
 {
+    public function sendsToPhone(): bool
+    {
+        return true;
+    }
+
     public function emailType(): EmailNotification
     {
         return EmailNotification::TicketCreated;
