@@ -100,6 +100,7 @@
                 <li>{{ __('Any ticket becomes at risk (:pct% of its time used) or breaches its first-response or resolution target.', ['pct' => config('sla.at_risk_threshold')]) }}</li>
             </x-manual.steps>
             <flux:text>{{ __('Each of these also arrives as a browser popup if you switch that on under Settings → Notifications; see "Emails and notifications" in the Support team guide. Clients can switch it on for themselves the same way.') }}</flux:text>
+            <flux:text class="mt-2">{{ __('Each administrator can turn any of these emails off for themselves under Settings → Notifications, and so can every other user for the emails they receive. Make sure at least one administrator keeps "New tickets" and "SLA alerts" on, or nobody will be emailed about them.') }}</flux:text>
             <flux:text class="mt-2">{{ __('Each ticket\'s Activity timeline keeps a permanent record of every status, priority and assignee change and every SLA event. The Work Log tab is a second permanent record, written by the support team and readable by the client; see "The work log" in the Support team guide.') }}</flux:text>
         </flux:accordion.item>
 

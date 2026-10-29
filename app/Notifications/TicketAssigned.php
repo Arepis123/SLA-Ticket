@@ -2,11 +2,17 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotification;
 use Illuminate\Notifications\Messages\MailMessage;
 use NotificationChannels\WebPush\WebPushMessage;
 
 class TicketAssigned extends TicketNotification
 {
+    public function emailType(): EmailNotification
+    {
+        return EmailNotification::TicketAssigned;
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
         return $this->baseMessage(__('A ticket was assigned to you'))

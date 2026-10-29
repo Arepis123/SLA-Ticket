@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotification;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Models\User;
@@ -13,6 +14,11 @@ class TicketStatusChanged extends TicketNotification
     public function __construct(Ticket $ticket, public TicketStatus $from)
     {
         parent::__construct($ticket);
+    }
+
+    public function emailType(): EmailNotification
+    {
+        return EmailNotification::StatusChanged;
     }
 
     public function toMail(object $notifiable): MailMessage

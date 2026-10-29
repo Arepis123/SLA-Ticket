@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotification;
 use App\Models\TicketWorkLog;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Str;
@@ -12,6 +13,11 @@ class NewTicketWorkLog extends TicketNotification
     public function __construct(public TicketWorkLog $workLog)
     {
         parent::__construct($workLog->ticket);
+    }
+
+    public function emailType(): EmailNotification
+    {
+        return EmailNotification::WorkLogged;
     }
 
     public function toMail(object $notifiable): MailMessage

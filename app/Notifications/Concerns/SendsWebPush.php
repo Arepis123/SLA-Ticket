@@ -2,25 +2,35 @@
 
 namespace App\Notifications\Concerns;
 
+use App\Enums\EmailNotification;
 use App\Models\User;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
 /**
- * Mail always, plus a browser push for users who enabled it on at least one
- * device. Checking here keeps a queued push job from being created for
- * everyone else.
+ * Mail unless the user turned this type of email off, plus a browser push for
+ * users who enabled it on at least one device. Checking here keeps queued
+ * jobs from being created for channels the user does not want.
  */
 trait SendsWebPush
 {
+    /**
+     * Which setting on the notification settings page controls this email.
+     */
+    abstract public function emailType(): EmailNotification;
+
     /**
      * @return array<int, string>
      */
     public function via(object $notifiable): array
     {
-        $channels = ['mail'];
+        if (! $notifiable instanceof User) {
+            return ['mail'];
+        }
 
-        if ($notifiable instanceof User && $notifiable->pushSubscriptions()->exists()) {
+        $channels = $notifiable->wantsEmail($this->emailType()) ? ['mail'] : [];
+
+        if ($notifiable->pushSubscriptions()->exists()) {
             $channels[] = WebPushChannel::class;
         }
 

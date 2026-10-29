@@ -3,6 +3,7 @@
         <flux:accordion.item :heading="__('1. Your role')" expanded>
             <flux:text>{{ __('As a member of the support team you can see and work on tickets from every client. You cannot open the Administration pages (Clients, Projects, Users, SLA Policies, Business Hours, Reports); those are for administrators only.') }}</flux:text>
             <flux:text class="mt-2">{{ __('Click your name at the bottom of the sidebar and choose Settings to manage your profile, password, two-factor authentication, passkeys, notifications and appearance. A passkey lets you sign in with your fingerprint, face or device PIN instead of typing a password; add one under Settings → Security.') }}</flux:text>
+            <flux:text class="mt-2">{{ __('Under Settings → Appearance you can make the text larger or smaller. Your text size is saved to your account and follows you to every device; light and dark mode are set separately on each device.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('2. Reading the SLA dashboard')">
@@ -103,6 +104,7 @@
             </x-manual.steps>
             <flux:text>{{ __('You are never notified about your own changes, only about what other people do.') }}</flux:text>
 
+            @include('livewire.manual.partials.email-settings')
             @include('livewire.manual.partials.browser-notifications')
             <flux:text class="mt-2">{{ __('SLA alert popups stay on screen until you dismiss them, so a breach is not missed while you are away from your desk.') }}</flux:text>
         </flux:accordion.item>

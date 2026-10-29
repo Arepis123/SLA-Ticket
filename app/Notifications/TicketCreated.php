@@ -2,11 +2,17 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotification;
 use Illuminate\Notifications\Messages\MailMessage;
 use NotificationChannels\WebPush\WebPushMessage;
 
 class TicketCreated extends TicketNotification
 {
+    public function emailType(): EmailNotification
+    {
+        return EmailNotification::TicketCreated;
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
         return $this->baseMessage(__('New ticket submitted'))

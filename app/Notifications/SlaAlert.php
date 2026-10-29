@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotification;
 use App\Models\Ticket;
 use Illuminate\Notifications\Messages\MailMessage;
 use NotificationChannels\WebPush\WebPushMessage;
@@ -11,6 +12,11 @@ class SlaAlert extends TicketNotification
     public function __construct(Ticket $ticket, public string $type)
     {
         parent::__construct($ticket);
+    }
+
+    public function emailType(): EmailNotification
+    {
+        return EmailNotification::SlaAlert;
     }
 
     public function toMail(object $notifiable): MailMessage

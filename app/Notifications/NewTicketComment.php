@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotification;
 use App\Models\TicketComment;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Str;
@@ -12,6 +13,11 @@ class NewTicketComment extends TicketNotification
     public function __construct(public TicketComment $comment)
     {
         parent::__construct($comment->ticket);
+    }
+
+    public function emailType(): EmailNotification
+    {
+        return EmailNotification::NewComment;
     }
 
     public function toMail(object $notifiable): MailMessage

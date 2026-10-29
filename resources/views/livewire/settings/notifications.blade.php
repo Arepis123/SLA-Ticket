@@ -7,7 +7,13 @@
         <div class="space-y-6">
             <div>
                 <flux:heading>{{ __('Email') }}</flux:heading>
-                <flux:text class="mt-1">{{ __('Ticket updates are always sent to :email.', ['email' => auth()->user()->email]) }}</flux:text>
+                <flux:text class="mt-1">{{ __('Choose which emails are sent to :email. Sign-in and password emails are always sent.', ['email' => auth()->user()->email]) }}</flux:text>
+
+                <div class="mt-4 space-y-4">
+                    @foreach (\App\Enums\EmailNotification::for(auth()->user()) as $email)
+                        <flux:switch wire:model.live="emails.{{ $email->value }}" :label="$email->label()" :description="$email->description()" align="left" />
+                    @endforeach
+                </div>
             </div>
 
             <flux:separator variant="subtle" />

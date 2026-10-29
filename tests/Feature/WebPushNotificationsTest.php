@@ -152,6 +152,66 @@ class WebPushNotificationsTest extends TestCase
         $this->assertSame(['mail'], $notification->via(User::factory()->create()));
     }
 
+    public function test_users_only_see_the_emails_they_can_receive(): void
+    {
+        Livewire::actingAs(User::factory()->create())->test(Notifications::class)
+            ->assertSet('emails', [
+                'status-changed' => true,
+                'new-comment' => true,
+                'work-logged' => true,
+                'ticket-merged' => true,
+                'client-reminder' => true,
+            ])
+            ->assertDontSee('SLA alerts');
+
+        Livewire::actingAs(User::factory()->admin()->create())->test(Notifications::class)
+            ->assertSet('emails', [
+                'ticket-created' => true,
+                'ticket-assigned' => true,
+                'status-changed' => true,
+                'new-comment' => true,
+                'sla-alert' => true,
+            ])
+            ->assertSee('SLA alerts');
+    }
+
+    public function test_users_can_turn_each_email_off_and_on(): void
+    {
+        $user = User::factory()->create();
+
+        Livewire::actingAs($user)->test(Notifications::class)
+            ->set('emails.new-comment', false)
+            ->set('emails.work-logged', false);
+
+        $this->assertSame(['new-comment', 'work-logged'], $user->fresh()->muted_emails);
+
+        Livewire::actingAs($user)->test(Notifications::class)
+            ->assertSet('emails.new-comment', false)
+            ->assertSet('emails.status-changed', true)
+            ->set('emails.new-comment', true);
+
+        $this->assertSame(['work-logged'], $user->fresh()->muted_emails);
+    }
+
+    public function test_users_cannot_change_an_email_they_never_receive(): void
+    {
+        Livewire::actingAs(User::factory()->create())->test(Notifications::class)
+            ->set('emails.sla-alert', false)
+            ->assertForbidden();
+    }
+
+    public function test_mail_is_only_skipped_for_the_email_types_the_user_turned_off(): void
+    {
+        $ticket = Ticket::factory()->create(['status' => TicketStatus::Resolved]);
+        $user = User::factory()->create(['muted_emails' => ['status-changed']]);
+
+        $this->assertSame([], (new TicketStatusChanged($ticket, TicketStatus::InProgress))->via($user));
+        $this->assertSame(['mail'], (new ClientTicketsReminder($user->reportedTickets()->get()))->via($user));
+
+        $user->updatePushSubscription('https://push.example/one', 'key', 'token');
+        $this->assertSame([WebPushChannel::class], (new TicketStatusChanged($ticket, TicketStatus::InProgress))->via($user));
+    }
+
     public function test_status_change_push_links_to_the_ticket(): void
     {
         $project = Project::factory()->create();

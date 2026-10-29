@@ -20,8 +20,9 @@
                 <li>{{ __('Sign in with the email and password you were given, or use the link emailed to you to set your own password.') }}</li>
                 <li>{{ __('Forgot your password? Click "Forgot your password?" on the sign-in page to get a reset link by email.') }}</li>
                 <li>{{ __('Click your name at the bottom of the sidebar and choose Settings to change your name, email or password, switch on two-factor authentication, or change between light and dark mode.') }}</li>
+                <li>{{ __('Under Settings → Appearance you can also make the text larger or smaller. Your text size is saved to your account and follows you to every device; light and dark mode are set separately on each device.') }}</li>
                 <li>{{ __('Under Settings → Security you can also add a passkey, which lets you sign in with your fingerprint, face or device PIN instead of typing your password.') }}</li>
-                <li>{{ __('Under Settings → Notifications you can switch on browser popups for ticket updates (see "Emails and notifications" below).') }}</li>
+                <li>{{ __('Under Settings → Notifications you can choose which emails you receive and switch on browser popups for ticket updates (see "Emails and notifications" below).') }}</li>
             </x-manual.steps>
         </flux:accordion.item>
 
@@ -127,6 +128,7 @@
                 <flux:text>{{ __('A ticket only starts appearing the day after it changed to Pending Client or Resolved, because you were already emailed about that change. After that it is included at most once a day. Client admins receive one summary for the whole company. Once you reply, or confirm or reopen the fix, the reminders for that ticket stop.') }}</flux:text>
             @endif
 
+            @include('livewire.manual.partials.email-settings')
             @include('livewire.manual.partials.browser-notifications')
         </flux:accordion.item>
     </flux:accordion>

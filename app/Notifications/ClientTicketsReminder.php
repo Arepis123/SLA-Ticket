@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotification;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Notifications\Concerns\SendsWebPush;
@@ -24,6 +25,11 @@ class ClientTicketsReminder extends Notification implements ShouldQueue
      * @param  Collection<int, Ticket>  $tickets
      */
     public function __construct(public Collection $tickets) {}
+
+    public function emailType(): EmailNotification
+    {
+        return EmailNotification::ClientReminder;
+    }
 
     public function toMail(object $notifiable): MailMessage
     {

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\EmailNotification;
+use App\Enums\FontSize;
 use App\Enums\Tour;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
@@ -30,6 +32,8 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
  * @property int|null $company_id
  * @property bool $is_client_admin
  * @property bool $is_active
+ * @property array<int, string>|null $muted_emails
+ * @property FontSize $font_size
  * @property array<string, string>|null $completed_tours
  * @property Carbon|null $email_verified_at
  * @property string $password
@@ -41,12 +45,19 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
  * @property Carbon|null $updated_at
  * @property-read Company|null $company
  */
-#[Fillable(['name', 'email', 'password', 'role', 'company_id', 'is_client_admin', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'role', 'company_id', 'is_client_admin', 'is_active', 'muted_emails', 'font_size'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasPushSubscriptions, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'font_size' => 'default',
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -61,6 +72,8 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'role' => UserRole::class,
             'is_client_admin' => 'boolean',
             'is_active' => 'boolean',
+            'muted_emails' => 'array',
+            'font_size' => FontSize::class,
             'completed_tours' => 'array',
         ];
     }
@@ -126,6 +139,11 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function isClientAdmin(): bool
     {
         return $this->isClient() && $this->is_client_admin;
+    }
+
+    public function wantsEmail(EmailNotification $email): bool
+    {
+        return ! in_array($email->value, $this->muted_emails ?? [], true);
     }
 
     /**

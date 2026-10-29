@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotification;
 use App\Models\Ticket;
 use Illuminate\Notifications\Messages\MailMessage;
 use NotificationChannels\WebPush\WebPushMessage;
@@ -14,6 +15,11 @@ class TicketMerged extends TicketNotification
     public function __construct(Ticket $ticket, public Ticket $primary)
     {
         parent::__construct($ticket);
+    }
+
+    public function emailType(): EmailNotification
+    {
+        return EmailNotification::TicketMerged;
     }
 
     public function toMail(object $notifiable): MailMessage
