@@ -4,6 +4,8 @@ namespace App\Notifications\Concerns;
 
 use App\Enums\EmailNotification;
 use App\Models\User;
+use App\Notifications\Channels\MobilePushChannel;
+use App\Services\Push\FcmClient;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
@@ -34,7 +36,20 @@ trait SendsWebPush
             $channels[] = WebPushChannel::class;
         }
 
+        if ($this->sendsToPhone() && $notifiable->deviceTokens()->exists() && app(FcmClient::class)->configured()) {
+            $channels[] = MobilePushChannel::class;
+        }
+
         return $channels;
+    }
+
+    /**
+     * Whether this also goes to the mobile app. Off by default: a phone only
+     * gets what needs attention, not every comment.
+     */
+    public function sendsToPhone(): bool
+    {
+        return false;
     }
 
     /**

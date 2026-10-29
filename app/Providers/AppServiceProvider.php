@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Ai\AiBudget;
 use App\Services\Ai\ClaudeLanguageModel;
 use App\Services\Ai\LanguageModel;
+use App\Services\Push\FcmClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
             config('services.anthropic.model'),
         ));
         $this->app->bind(AiBudget::class, fn () => new AiBudget(config('services.anthropic.daily_limit')));
+        $this->app->singleton(FcmClient::class, fn () => new FcmClient(config('services.fcm.credentials')));
     }
 
     /**

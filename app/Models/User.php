@@ -88,6 +88,16 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
+     * Phones signed in to the mobile app that receive push notifications.
+     *
+     * @return HasMany<DeviceToken, $this>
+     */
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    /**
      * @return HasMany<Ticket, $this>
      */
     public function reportedTickets(): HasMany

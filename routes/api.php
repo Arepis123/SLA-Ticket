@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Api\AuthTokenController;
+use App\Http\Controllers\Api\DeviceController;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +18,10 @@ Route::post('auth/token', [AuthTokenController::class, 'store'])->middleware('th
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::delete('auth/token', [AuthTokenController::class, 'destroy'])->name('api.auth.logout');
     Route::get('me', fn (Request $request) => new UserResource($request->user()))->name('api.me');
+
+    // Push notifications to this phone.
+    Route::post('devices', [DeviceController::class, 'store'])->name('api.devices.store');
+    Route::delete('devices', [DeviceController::class, 'destroy'])->name('api.devices.destroy');
 
     Route::middleware('can:admin')->prefix('admin')->name('api.admin.')->group(function () {
         Route::get('dashboard', Admin\DashboardController::class)->name('dashboard');
