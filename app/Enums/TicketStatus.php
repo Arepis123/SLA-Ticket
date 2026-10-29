@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum TicketStatus: string
+enum TicketStatus: string implements HasLabel
 {
     case Open = 'open';
     case Acknowledged = 'acknowledged';

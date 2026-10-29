@@ -76,3 +76,6 @@ Schedule::command('tickets:remind --due')->everyMinute()->withoutOverlapping();
 Schedule::command('queue:work --stop-when-empty --max-time=50')
     ->everyMinute()
     ->withoutOverlapping();
+
+// Mobile app tokens expire after 30 days; clear the dead rows once they have been gone a day.
+Schedule::command('sanctum:prune-expired --hours=24')->daily();

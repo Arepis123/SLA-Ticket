@@ -3,12 +3,10 @@
 namespace App\Livewire;
 
 use App\Concerns\HasGuidedTour;
-use App\Enums\SlaState;
 use App\Enums\TicketPriority;
-use App\Enums\TicketStatus;
 use App\Enums\Tour;
 use App\Models\Ticket;
-use App\Support\Duration;
+use App\Services\DashboardMetrics;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -26,6 +24,12 @@ class Dashboard extends Component
         return Tour::Dashboard;
     }
 
+    #[Computed]
+    public function metrics(): DashboardMetrics
+    {
+        return new DashboardMetrics(Auth::user());
+    }
+
     /**
      * All unresolved tickets visible to the user (evaluated once per render).
      *
@@ -34,12 +38,7 @@ class Dashboard extends Component
     #[Computed]
     public function unresolved(): Collection
     {
-        return Ticket::query()
-            ->visibleTo(Auth::user())
-            ->unresolved()
-            ->with(['project', 'company', 'assignee'])
-            ->orderBy('resolution_due_at')
-            ->get();
+        return $this->metrics->unresolved();
     }
 
     /**
@@ -50,12 +49,7 @@ class Dashboard extends Component
     #[Computed]
     public function recentlyResolved(): Collection
     {
-        return Ticket::query()
-            ->visibleTo(Auth::user())
-            ->whereIn('status', [TicketStatus::Resolved, TicketStatus::Closed])
-            ->whereNull('merged_into_id')
-            ->where('resolved_at', '>=', now()->subDays(30))
-            ->get();
+        return $this->metrics->recentlyResolved();
     }
 
     /**
@@ -64,32 +58,7 @@ class Dashboard extends Component
     #[Computed]
     public function stats(): array
     {
-        $states = $this->unresolved->map(fn (Ticket $ticket) => $ticket->slaState());
-        $resolved = $this->recentlyResolved;
-        $met = $resolved->filter(fn (Ticket $ticket) => $ticket->slaState() === SlaState::Met)->count();
-
-        $responded = Ticket::query()
-            ->visibleTo(Auth::user())
-            ->whereNotNull('first_responded_at')
-            ->where('created_at', '>=', now()->subDays(30))
-            ->get(['created_at', 'first_responded_at']);
-
-        return [
-            'open' => $this->unresolved->count(),
-            'unassigned' => $this->unresolved->whereNull('assignee_id')->count(),
-            'at_risk' => $states->filter(fn (SlaState $state) => $state === SlaState::AtRisk)->count(),
-            'breached' => $states->filter(fn (SlaState $state) => $state === SlaState::Breached)->count(),
-            'pending_client' => $this->unresolved->where('status', TicketStatus::PendingClient)->count(),
-            'awaiting_confirmation' => Ticket::query()->visibleTo(Auth::user())->where('status', TicketStatus::Resolved)->count(),
-            'resolved_30d' => $resolved->count(),
-            'compliance' => $resolved->isEmpty() ? null : round($met / $resolved->count() * 100),
-            'avg_response' => $responded->isEmpty() ? null : Duration::human(
-                $responded->avg(fn (Ticket $ticket) => $ticket->created_at->diffInMinutes($ticket->first_responded_at)),
-            ),
-            'avg_resolution' => $resolved->isEmpty() ? null : Duration::human(
-                $resolved->avg(fn (Ticket $ticket) => max(0, $ticket->created_at->diffInMinutes($ticket->resolved_at) - $ticket->paused_minutes)),
-            ),
-        ];
+        return $this->metrics->stats();
     }
 
     /**
@@ -100,14 +69,7 @@ class Dashboard extends Component
     #[Computed]
     public function attention(): Collection
     {
-        return $this->unresolved
-            ->filter(fn (Ticket $ticket) => $ticket->status !== TicketStatus::PendingClient)
-            ->sortBy(fn (Ticket $ticket) => [
-                $ticket->slaState() === SlaState::Breached ? 0 : 1,
-                $ticket->resolution_due_at->getTimestamp(),
-            ])
-            ->take(5)
-            ->values();
+        return $this->metrics->attention();
     }
 
     /**
@@ -123,9 +85,11 @@ class Dashboard extends Component
             'low' => 'zinc',
         ];
 
+        $counts = $this->metrics->byPriority();
+
         return collect(TicketPriority::cases())->map(fn (TicketPriority $priority) => [
             'label' => $priority->label(),
-            'value' => $this->unresolved->where('priority', $priority)->count(),
+            'value' => $counts[$priority->value],
             'color' => $colors[$priority->value],
             'href' => route('tickets.index', ['status' => 'unresolved', 'priority' => $priority->value]),
         ])->all();
@@ -137,17 +101,13 @@ class Dashboard extends Component
     #[Computed]
     public function byProject(): array
     {
-        return $this->unresolved
-            ->groupBy('project_id')
-            ->map(fn (Collection $tickets) => [
-                'label' => $tickets->first()->project->name.(Auth::user()->isStaff() ? ' · '.$tickets->first()->company->name : ''),
-                'value' => $tickets->count(),
+        return $this->metrics->byProject()
+            ->map(fn (array $row) => [
+                'label' => $row['project']->name.(Auth::user()->isStaff() ? ' · '.$row['company']->name : ''),
+                'value' => $row['count'],
                 'color' => 'sky',
-                'href' => route('tickets.index', ['status' => 'unresolved', 'project' => $tickets->first()->project_id]),
+                'href' => route('tickets.index', ['status' => 'unresolved', 'project' => $row['project']->id]),
             ])
-            ->sortByDesc('value')
-            ->take(6)
-            ->values()
             ->all();
     }
 
@@ -159,21 +119,7 @@ class Dashboard extends Component
     #[Computed]
     public function trend(): array
     {
-        $counts = Ticket::query()
-            ->visibleTo(Auth::user())
-            ->where('created_at', '>=', now()->subDays(13)->startOfDay())
-            ->pluck('created_at')
-            ->countBy(fn ($date) => $date->format('Y-m-d'));
-
-        return collect(range(13, 0))->map(function (int $daysAgo) use ($counts) {
-            $day = now()->subDays($daysAgo);
-
-            return [
-                'date' => $day->format('Y-m-d'),
-                'label' => $day->format('d M'),
-                'count' => $counts[$day->format('Y-m-d')] ?? 0,
-            ];
-        })->all();
+        return $this->metrics->trend();
     }
 
     /**

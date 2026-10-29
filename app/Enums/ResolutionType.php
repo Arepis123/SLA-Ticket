@@ -5,7 +5,7 @@ namespace App\Enums;
 /**
  * How a resolved or closed ticket was dealt with.
  */
-enum ResolutionType: string
+enum ResolutionType: string implements HasLabel
 {
     case CodeChange = 'code_change';
     case DataFix = 'data_fix';

@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum TicketEnvironment: string
+enum TicketEnvironment: string implements HasLabel
 {
     case Production = 'production';
     case Staging = 'staging';

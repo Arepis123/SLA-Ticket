@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum TicketPriority: string
+enum TicketPriority: string implements HasLabel
 {
     case Critical = 'critical';
     case High = 'high';

@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\SavedView;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\TicketFilters;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,9 +52,6 @@ class Index extends Component
 
     #[Url(except: 'desc')]
     public string $direction = 'desc';
-
-    /** @var list<string> */
-    protected array $sortable = ['reference', 'title', 'priority', 'status', 'resolution_due_at', 'created_at', 'updated_at'];
 
     /**
      * List state a saved view captures, with each value's default.
@@ -104,7 +102,7 @@ class Index extends Component
 
     public function sortBy(string $column): void
     {
-        if (! in_array($column, $this->sortable, true)) {
+        if (! in_array($column, TicketFilters::SORTABLE, true)) {
             return;
         }
 
@@ -255,38 +253,19 @@ class Index extends Component
     {
         $user = Auth::user();
 
-        return Ticket::query()
-            ->visibleTo($user)
+        $filters = new TicketFilters(
+            search: $this->search,
+            status: $this->status,
+            priority: $this->priority,
+            project: $this->project,
+            assignee: $this->assignee,
+            sla: $this->sla,
+            sort: $this->sort,
+            direction: $this->direction,
+        );
+
+        return $filters->apply(Ticket::query(), $user)
             ->with(['project', 'company', 'assignee', 'reporter', 'mergedInto:id,reference'])
-            ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
-                ->where('reference', 'like', "%{$this->search}%")
-                ->orWhere('title', 'like', "%{$this->search}%")))
-            ->when($this->status === 'unresolved', fn (Builder $query) => $query->unresolved())
-            ->when(TicketStatus::tryFrom($this->status), fn (Builder $query, TicketStatus $status) => $query->where('status', $status))
-            ->when(TicketPriority::tryFrom($this->priority), fn (Builder $query, TicketPriority $priority) => $query->where('priority', $priority))
-            ->when($this->project !== '', fn (Builder $query) => $query->where('project_id', (int) $this->project))
-            ->when($user->isStaff() && $this->assignee !== '', fn (Builder $query) => match ($this->assignee) {
-                'me' => $user->isInternal() ? $query->where('assignee_id', $user->id) : $query,
-                'none' => $query->whereNull('assignee_id'),
-                default => $query->where('assignee_id', (int) $this->assignee),
-            })
-            ->when($this->sla === 'breached', fn (Builder $query) => $query->whereNull('merged_into_id')->where(fn (Builder $query) => $query
-                ->whereNotNull('resolution_breached_at')
-                ->orWhereNotNull('response_breached_at')
-                ->orWhere(fn (Builder $query) => $query->running()->where('resolution_due_at', '<', now()))))
-            ->when($this->sla === 'at_risk', fn (Builder $query) => $query
-                ->running()
-                ->whereNotNull('at_risk_notified_at')
-                ->whereNull('resolution_breached_at')
-                ->whereNull('response_breached_at')
-                ->where('resolution_due_at', '>=', now()))
-            ->when($this->sort === 'priority', fn (Builder $query) => $query->orderByRaw(
-                "case priority when 'critical' then 1 when 'high' then 2 when 'medium' then 3 else 4 end ".($this->direction === 'asc' ? 'asc' : 'desc'),
-            ), fn (Builder $query) => $query->orderBy(
-                in_array($this->sort, $this->sortable, true) ? $this->sort : 'created_at',
-                $this->direction === 'asc' ? 'asc' : 'desc',
-            ))
-            ->orderByDesc('id')
             ->paginate(10);
     }
 
