@@ -14,9 +14,3 @@
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
-
-@auth
-    @if (auth()->user()->font_size !== \App\Enums\FontSize::Default)
-        <style>html { font-size: {{ auth()->user()->font_size->scale() }}; }</style>
-    @endif
-@endauth

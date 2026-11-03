@@ -48,10 +48,21 @@ class AppearanceTest extends TestCase
     {
         $this->actingAs(User::factory()->create())
             ->get(route('dashboard'))
-            ->assertDontSee('html { font-size', false);
+            ->assertSee('style="font-size: 100%"', false);
 
         $this->actingAs(User::factory()->create(['font_size' => FontSize::ExtraLarge]))
             ->get(route('dashboard'))
-            ->assertSee('html { font-size: 125%; }', false);
+            ->assertSee('style="font-size: 125%"', false);
+    }
+
+    /**
+     * wire:navigate keeps <style> tags from earlier pages but syncs the <html>
+     * attributes, so the size must live on <html> to follow a change.
+     */
+    public function test_the_size_is_not_rendered_as_a_head_style_tag(): void
+    {
+        $this->actingAs(User::factory()->create(['font_size' => FontSize::Large]))
+            ->get(route('dashboard'))
+            ->assertDontSee('html { font-size', false);
     }
 }
