@@ -2,6 +2,7 @@
     :title="__('Log in')"
     :background="asset('images/background-4.jpeg')"
     :background-dark="asset('images/background-5.jpeg')"
+    :background-video="asset('videos/'.rawurlencode('Video Background Day.mp4'))"
 >
     <x-slot:info>
         <x-auth-system-info />

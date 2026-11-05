@@ -7,6 +7,7 @@
         @php
             $background ??= null;
             $backgroundDark ??= $background;
+            $backgroundVideo ??= null;
         @endphp
 
         {{-- 60/40 split: five columns, three for the info panel and two for the form. --}}
@@ -16,6 +17,20 @@
     {{-- Artwork and scrim both follow the theme; only one set is ever painted. --}}
                     <div class="absolute inset-0 bg-cover bg-center dark:hidden" style="background-image: url('{{ $background }}')"></div>
                     <div class="absolute inset-0 hidden bg-cover bg-center dark:block" style="background-image: url('{{ $backgroundDark }}')"></div>
+
+                    @if ($backgroundVideo)
+                        {{-- Day-mode video sits over the still image, which stays as the fallback and the reduced-motion view. --}}
+                        <video
+                            class="absolute inset-0 size-full object-cover dark:hidden motion-reduce:hidden"
+                            src="{{ $backgroundVideo }}"
+                            poster="{{ $background }}"
+                            autoplay
+                            muted
+                            loop
+                            playsinline
+                            aria-hidden="true"
+                        ></video>
+                    @endif
 
                     <div class="absolute inset-0 dark:hidden">
                         <div class="absolute inset-0 bg-white/10"></div>
