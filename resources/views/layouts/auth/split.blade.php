@@ -8,6 +8,7 @@
             $background ??= null;
             $backgroundDark ??= $background;
             $backgroundVideo ??= null;
+            $backgroundVideoDark ??= null;
         @endphp
 
         {{-- 60/40 split: five columns, three for the info panel and two for the form. --}}
@@ -24,6 +25,20 @@
                             class="absolute inset-0 size-full object-cover dark:hidden motion-reduce:hidden"
                             src="{{ $backgroundVideo }}"
                             poster="{{ $background }}"
+                            autoplay
+                            muted
+                            loop
+                            playsinline
+                            aria-hidden="true"
+                        ></video>
+                    @endif
+
+                    @if ($backgroundVideoDark)
+                        {{-- Night-mode counterpart: same fallback behaviour, using the dark still as poster. --}}
+                        <video
+                            class="absolute inset-0 hidden size-full object-cover motion-safe:dark:block"
+                            src="{{ $backgroundVideoDark }}"
+                            poster="{{ $backgroundDark }}"
                             autoplay
                             muted
                             loop
