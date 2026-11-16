@@ -9,7 +9,7 @@
             :size="$attachment->size"
         >
             <x-slot name="actions">
-                <flux:button size="sm" variant="ghost" icon="arrow-top-right-on-square" :href="$url" target="_blank" :aria-label="__('Open :file', ['file' => $attachment->original_name])" />
+                <flux:button size="sm" variant="ghost" icon="arrow-top-right-on-square" :href="$attachment->isImage() ? $url.'?view=1' : $url" target="_blank" :aria-label="__('Open :file', ['file' => $attachment->original_name])" />
             </x-slot>
         </flux:file-item>
     @endforeach

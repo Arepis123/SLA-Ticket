@@ -332,7 +332,9 @@ class Ticket extends Model
 
     /**
      * Recompute due dates from the creation time, the SLA policy for the
-     * current priority and the total time the clock has been paused.
+     * current priority and the total time the clock has been paused. A response
+     * deadline that has already been breached stays put, so the recorded breach
+     * and the deadline it was measured against never disagree.
      */
     public function recalculateDueDates(): void
     {
@@ -342,7 +344,10 @@ class Ticket extends Model
         if ($this->usesBusinessHours()) {
             $calendar = app(BusinessCalendar::class);
 
-            $this->response_due_at = $calendar->addMinutes($created, $this->paused_business_minutes + $targets['response']);
+            if ($this->response_breached_at === null) {
+                $this->response_due_at = $calendar->addMinutes($created, $this->paused_business_minutes + $targets['response']);
+            }
+
             $this->resolution_due_at = $calendar->addMinutes($created, $this->paused_business_minutes + $targets['resolution']);
 
             return;
@@ -350,7 +355,10 @@ class Ticket extends Model
 
         $start = $created->addMinutes($this->paused_minutes);
 
-        $this->response_due_at = $start->addMinutes($targets['response']);
+        if ($this->response_breached_at === null) {
+            $this->response_due_at = $start->addMinutes($targets['response']);
+        }
+
         $this->resolution_due_at = $start->addMinutes($targets['resolution']);
     }
 

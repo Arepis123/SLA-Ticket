@@ -23,7 +23,7 @@ use Tests\TestCase;
 
 /**
  * The office week seeded by the migration is Monday to Friday, 09:00 to 18:00. Times
- * below are Kuala Lumpur time (UTC+8) while the app itself runs in UTC.
+ * below are Kuala Lumpur time (UTC+8), which is also the app timezone.
  */
 class BusinessHoursTest extends TestCase
 {
@@ -88,7 +88,7 @@ class BusinessHoursTest extends TestCase
         // Friday 17:00 + 4h = 1h on Friday, then 3h from Monday 09:00.
         $due = $calendar->addMinutes($this->at('2026-10-16 17:00'), 4 * 60);
         $this->assertTrue($due->equalTo($this->at('2026-10-19 12:00')));
-        $this->assertSame('UTC', $due->timezoneName, 'Results come back in the app timezone.');
+        $this->assertSame(config('app.timezone'), $due->timezoneName, 'Results come back in the app timezone.');
 
         // Before opening, the clock starts at 09:00.
         $this->assertTrue($calendar->addMinutes($this->at('2026-10-19 07:00'), 60)->equalTo($this->at('2026-10-19 10:00')));
@@ -294,6 +294,34 @@ class BusinessHoursTest extends TestCase
         Holiday::create(['date' => '2026-10-19', 'name' => 'Deepavali (observed)']);
         $this->assertSame(0, $this->manager->recalculateOpenDueDates());
         $this->assertTrue($ticket->fresh()->resolution_due_at->equalTo($due));
+    }
+
+    public function test_a_breached_response_deadline_stays_put_when_a_holiday_is_added(): void
+    {
+        // Thu 09:00 + 4h response = Thu 13:00; + 24h resolution = Mon 15:00 (9h office days).
+        $this->travelToLocal('2026-10-15 09:00');
+        $ticket = $this->openTicket(TicketPriority::High);
+
+        // Response missed at 13:00 and recorded by the SLA check; first reply comes at 15:00.
+        $this->travelToLocal('2026-10-15 14:00');
+        $this->manager->checkSla();
+        $this->travelToLocal('2026-10-15 15:00');
+        $ticket->refresh()->forceFill(['first_responded_at' => now()])->save();
+
+        $responseDue = $ticket->response_due_at;
+        $this->assertTrue($responseDue->equalTo($this->at('2026-10-15 13:00')));
+        $this->assertNotNull($ticket->response_breached_at);
+        $this->assertNull($ticket->resolution_breached_at);
+
+        // A holiday on the day the ticket was opened would otherwise push the response
+        // deadline to Fri 13:00, after the reply, quietly turning the breach into a pass.
+        Holiday::create(['date' => '2026-10-15', 'name' => 'Backdated holiday']);
+        $this->assertSame(1, $this->manager->recalculateOpenDueDates());
+
+        $ticket->refresh();
+        $this->assertTrue($ticket->response_due_at->equalTo($responseDue), 'The breached response deadline is kept.');
+        $this->assertTrue($ticket->isResponseBreached());
+        $this->assertTrue($ticket->resolution_due_at->equalTo($this->at('2026-10-20 15:00')), 'The open resolution deadline still moves.');
     }
 
     public function test_only_admins_reach_the_business_hours_page(): void

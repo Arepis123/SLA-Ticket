@@ -179,6 +179,28 @@ class TicketAccessTest extends TestCase
         $this->actingAs($admin)->get(route('tickets.attachments.show', [$ticket, $attachment]))->assertOk();
     }
 
+    public function test_an_opened_image_is_titled_with_just_its_file_name(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $admin = User::factory()->admin()->create();
+
+        $comment = app(TicketManager::class)->comment($ticket, $admin, 'Screenshot attached', files: [
+            UploadedFile::fake()->image('screen.jpeg', 1280, 720),
+        ]);
+        $attachment = $comment->attachments->first();
+        $url = route('tickets.attachments.show', [$ticket, $attachment, $attachment->original_name]);
+
+        $this->actingAs($ticket->reporter)->get(route('tickets.show', $ticket))->assertSee($url.'?view=1', escape: false);
+
+        $this->actingAs($ticket->reporter)->get($url.'?view=1')
+            ->assertOk()
+            ->assertSee("<title>{$attachment->original_name}</title>", escape: false)
+            ->assertSee('src="'.e($url).'"', escape: false);
+
+        // The raw file is still what thumbnails load.
+        $this->actingAs($ticket->reporter)->get($url)->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+    }
+
     public function test_staff_can_add_a_work_log_visible_to_everyone_but_clients_cannot_add_one(): void
     {
         $ticket = Ticket::factory()->create();
