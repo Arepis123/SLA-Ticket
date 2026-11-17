@@ -135,3 +135,11 @@ select:focus[data-flux-control] {
         text-decoration: underline;
     }
 }
+
+/* Never show Safari's play button over the sign-in background video; if it
+   cannot autoplay, app.js hides it and the still image shows instead. */
+video[data-background-video]::-webkit-media-controls,
+video[data-background-video]::-webkit-media-controls-start-playback-button {
+    display: none !important;
+    -webkit-appearance: none;
+}

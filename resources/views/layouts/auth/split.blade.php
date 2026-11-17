@@ -29,6 +29,8 @@
                             muted
                             loop
                             playsinline
+                            disablepictureinpicture
+                            data-background-video
                             aria-hidden="true"
                         ></video>
                     @endif
@@ -43,6 +45,8 @@
                             muted
                             loop
                             playsinline
+                            disablepictureinpicture
+                            data-background-video
                             aria-hidden="true"
                         ></video>
                     @endif

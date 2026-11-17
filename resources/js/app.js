@@ -11,6 +11,45 @@ const SEEN_TICK_MS = 500;
 const SEEN_DWELL_MS = 1500;
 const SEEN_FLUSH_MS = 3000;
 
+/**
+ * The sign-in page's background video. Safari on iPhone and iPad refuses to
+ * autoplay even muted video in Low Power Mode, and then paints a play button
+ * that can't be tapped because the overlays sit on top of it. When that
+ * happens, hide the video so the still image behind it shows, and try again
+ * on the first tap anywhere (a tap lets Safari play it) or on returning to the tab.
+ */
+function startBackgroundVideos() {
+    const videos = [...document.querySelectorAll('video[data-background-video]')]
+        .filter((video) => video.offsetParent !== null && video.paused);
+
+    videos.forEach((video) => {
+        video.muted = true;
+
+        const attempt = video.play();
+
+        if (!attempt) {
+            return;
+        }
+
+        attempt
+            .then(() => {
+                video.style.visibility = '';
+            })
+            .catch(() => {
+                video.style.visibility = 'hidden';
+                document.addEventListener('pointerdown', startBackgroundVideos, { once: true, capture: true });
+            });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', startBackgroundVideos);
+document.addEventListener('livewire:navigated', startBackgroundVideos);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        startBackgroundVideos();
+    }
+});
+
 document.addEventListener('alpine:init', () => {
     // Set while a guided tour is on screen, so the push card waits instead of covering it.
     window.Alpine.store('tour', { open: false });
