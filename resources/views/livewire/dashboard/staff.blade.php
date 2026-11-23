@@ -95,88 +95,92 @@
         </div>
     @endforeach
 
-    <div class="grid gap-6 xl:grid-cols-3">
-        <flux:card class="xl:col-span-2">
-            <div class="mb-4 flex items-center justify-between">
-                <flux:heading size="lg">{{ __('Needs attention') }}</flux:heading>
-                <flux:button size="sm" variant="ghost" icon-trailing="arrow-right" :href="route('tickets.index', ['status' => 'unresolved', 'sort' => 'resolution_due_at', 'direction' => 'asc'])" wire:navigate>{{ __('All open') }}</flux:button>
-            </div>
-
-            @if ($this->attention->isEmpty())
-                <div class="py-10 text-center">
-                    <flux:icon name="face-smile" class="mx-auto size-10 text-green-500" />
-                    <flux:text class="mt-2">{{ __('Nothing waiting on your team. Nice work!') }}</flux:text>
+    <div class="flex flex-col gap-6">
+        <section class="grid gap-6 xl:grid-cols-3">
+            <flux:card class="xl:col-span-2">
+                <div class="mb-4 flex items-center justify-between">
+                    <flux:heading size="lg">{{ __('Needs attention') }}</flux:heading>
+                    <flux:button size="sm" variant="ghost" icon-trailing="arrow-right" :href="route('tickets.index', ['status' => 'unresolved', 'sort' => 'resolution_due_at', 'direction' => 'asc'])" wire:navigate>{{ __('All open') }}</flux:button>
                 </div>
-            @else
-                <flux:table>
-                    <flux:table.columns>
-                        <flux:table.column>{{ __('Ticket') }}</flux:table.column>
-                        <flux:table.column>{{ __('Priority') }}</flux:table.column>
-                        <flux:table.column>{{ __('Assignee') }}</flux:table.column>
-                        <flux:table.column>{{ __('SLA') }}</flux:table.column>
-                    </flux:table.columns>
-                    <flux:table.rows>
-                        @foreach ($this->attention as $ticket)
-                            <flux:table.row :key="$ticket->id">
-                                <flux:table.cell class="max-w-72">
-                                    <div class="truncate">
-                                        <flux:link :href="route('tickets.show', $ticket)" variant="ghost" class="font-medium" wire:navigate>{{ $ticket->title }}</flux:link>
-                                    </div>
-                                    <flux:text size="sm" class="truncate">{{ $ticket->reference }} · {{ $ticket->company->name }}</flux:text>
-                                </flux:table.cell>
-                                <flux:table.cell><x-ticket.priority-badge :priority="$ticket->priority" /></flux:table.cell>
-                                <flux:table.cell>
-                                    @if ($ticket->assignee)
-                                        <flux:text>{{ $ticket->assignee->name }}</flux:text>
-                                    @else
-                                        <flux:badge size="sm" color="red" variant="outline">{{ __('Unassigned') }}</flux:badge>
-                                    @endif
-                                </flux:table.cell>
-                                <flux:table.cell><x-ticket.sla-badge :ticket="$ticket" /></flux:table.cell>
-                            </flux:table.row>
-                        @endforeach
-                    </flux:table.rows>
-                </flux:table>
-            @endif
-        </flux:card>
 
-        <div class="flex flex-col gap-6">
-            <flux:card>
-                <flux:heading size="lg" class="mb-4">{{ __('Open by priority') }}</flux:heading>
-                <x-bar-list :items="$this->byPriority" />
+                @if ($this->attention->isEmpty())
+                    <div class="py-10 text-center">
+                        <flux:icon name="face-smile" class="mx-auto size-10 text-green-500" />
+                        <flux:text class="mt-2">{{ __('Nothing waiting on your team. Nice work!') }}</flux:text>
+                    </div>
+                @else
+                    <flux:table>
+                        <flux:table.columns>
+                            <flux:table.column>{{ __('Ticket') }}</flux:table.column>
+                            <flux:table.column>{{ __('Priority') }}</flux:table.column>
+                            <flux:table.column>{{ __('Assignee') }}</flux:table.column>
+                            <flux:table.column>{{ __('SLA') }}</flux:table.column>
+                        </flux:table.columns>
+                        <flux:table.rows>
+                            @foreach ($this->attention as $ticket)
+                                <flux:table.row :key="$ticket->id">
+                                    <flux:table.cell class="max-w-72">
+                                        <div class="truncate">
+                                            <flux:link :href="route('tickets.show', $ticket)" variant="ghost" class="font-medium" wire:navigate>{{ $ticket->title }}</flux:link>
+                                        </div>
+                                        <flux:text size="sm" class="truncate">{{ $ticket->reference }} · {{ $ticket->company->name }}</flux:text>
+                                    </flux:table.cell>
+                                    <flux:table.cell><x-ticket.priority-badge :priority="$ticket->priority" /></flux:table.cell>
+                                    <flux:table.cell>
+                                        @if ($ticket->assignee)
+                                            <flux:text>{{ $ticket->assignee->name }}</flux:text>
+                                        @else
+                                            <flux:badge size="sm" color="red" variant="outline">{{ __('Unassigned') }}</flux:badge>
+                                        @endif
+                                    </flux:table.cell>
+                                    <flux:table.cell><x-ticket.sla-badge :ticket="$ticket" /></flux:table.cell>
+                                </flux:table.row>
+                            @endforeach
+                        </flux:table.rows>
+                    </flux:table>
+                @endif
             </flux:card>
 
+            <div class="flex flex-col gap-6">
+                <flux:card>
+                    <flux:heading size="lg" class="mb-4">{{ __('Open by priority') }}</flux:heading>
+                    <x-bar-list :items="$this->byPriority" />
+                </flux:card>
+
+                <flux:card>
+                    <flux:heading size="lg" class="mb-4">{{ __('Open by system') }}</flux:heading>
+                    <x-bar-list :items="$this->byProject" :empty="__('No open tickets.')" />
+                </flux:card>
+            </div>
+        </section>
+
+        <section @class(['order-first' => $this->unresolved->isEmpty()])>
             <flux:card>
-                <flux:heading size="lg" class="mb-4">{{ __('Open by system') }}</flux:heading>
-                <x-bar-list :items="$this->byProject" :empty="__('No open tickets.')" />
+                <flux:heading size="lg">{{ __('Tickets opened — last 14 days') }}</flux:heading>
+    
+                <flux:chart :value="$this->trend" class="mt-6 w-full aspect-[4/1] min-h-48">
+                    <flux:chart.svg>
+                        <flux:chart.bar field="count" class="text-sky-500 dark:text-sky-400" radius="4 0" width="60%" />
+    
+                        <flux:chart.axis axis="x" field="label" scale="categorical">
+                            <flux:chart.axis.line />
+                            <flux:chart.axis.tick />
+                        </flux:chart.axis>
+    
+                        <flux:chart.axis axis="y" tick-start="0">
+                            <flux:chart.axis.grid />
+                            <flux:chart.axis.tick />
+                        </flux:chart.axis>
+    
+                        <flux:chart.cursor />
+                    </flux:chart.svg>
+    
+                    <flux:chart.tooltip>
+                        <flux:chart.tooltip.heading field="label" />
+                        <flux:chart.tooltip.value field="count" :label="__('Tickets opened')" />
+                    </flux:chart.tooltip>
+                </flux:chart>
             </flux:card>
-        </div>
+        </section>
     </div>
-
-    <flux:card>
-        <flux:heading size="lg">{{ __('Tickets opened — last 14 days') }}</flux:heading>
-
-        <flux:chart :value="$this->trend" class="mt-6 w-full aspect-[4/1] min-h-48">
-            <flux:chart.svg>
-                <flux:chart.bar field="count" class="text-sky-500 dark:text-sky-400" radius="4 0" width="60%" />
-
-                <flux:chart.axis axis="x" field="label" scale="categorical">
-                    <flux:chart.axis.line />
-                    <flux:chart.axis.tick />
-                </flux:chart.axis>
-
-                <flux:chart.axis axis="y" tick-start="0">
-                    <flux:chart.axis.grid />
-                    <flux:chart.axis.tick />
-                </flux:chart.axis>
-
-                <flux:chart.cursor />
-            </flux:chart.svg>
-
-            <flux:chart.tooltip>
-                <flux:chart.tooltip.heading field="label" />
-                <flux:chart.tooltip.value field="count" :label="__('Tickets opened')" />
-            </flux:chart.tooltip>
-        </flux:chart>
-    </flux:card>
 </div>
