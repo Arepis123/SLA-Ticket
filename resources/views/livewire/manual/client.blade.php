@@ -33,7 +33,7 @@
                 <li>{{ __('A green notice when a fix is ready for you to check.') }}</li>
                 <li>{{ __('Counts of your open tickets, tickets waiting for your reply, and tickets fixed in the last 30 days.') }}</li>
                 <li>{{ __('Your most recently updated tickets. Click a ticket title to open it.') }}</li>
-                <li>{{ __('Client admins only: "Tickets opened — last 12 weeks", a calendar with one square per day for your whole company. Columns are weeks (numbered as in the calendar, for example W45) and rows are days of the week. The lightest square means no tickets, and the darker shades mean 1, 2, and 3 or more tickets. Point at a square to see the date and the exact count.') }}</li>
+                <li>{{ __('Client admins only: "Tickets opened — last 12 weeks", a calendar with one square per day for your whole company. Columns are weeks (numbered as in the calendar, for example W45) and rows are days of the week. The lightest square means no tickets, and the darker shades mean 1, 2, and 3 or more tickets. The square with a dot is today. Point at a square to see the date and the exact count.') }}</li>
             </x-manual.steps>
         </flux:accordion.item>
 

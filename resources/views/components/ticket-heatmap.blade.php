@@ -43,12 +43,20 @@
                     @if ($day)
                         <flux:tooltip>
                             <div class="group flex h-6 w-full cursor-default items-center justify-center rounded {{ $heatmapLevels[$day['level']] }}">
-                                <span class="size-1.5 rounded-full bg-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100"></span>
-                                <span class="sr-only">{{ $day['label'] }}: {{ $day['count'] }}</span>
+                                @php($isToday = $day['date'] === now()->format('Y-m-d'))
+                                {{-- Dot marks today, and the tile under the pointer. White would vanish on the palest tile. --}}
+                                <span @class([
+                                    'size-1.5 rounded-full shadow-sm transition-opacity',
+                                    'bg-blue-500' => $day['level'] === 0,
+                                    'bg-white' => $day['level'] > 0,
+                                    'opacity-100' => $isToday,
+                                    'opacity-0 group-hover:opacity-100' => ! $isToday,
+                                ])></span>
+                                <span class="sr-only">{{ $isToday ? __('Today').', ' : '' }}{{ $day['label'] }}: {{ $day['count'] }}</span>
                             </div>
 
                             <flux:tooltip.content class="rounded-lg! border! border-zinc-200! bg-white! px-3! py-2! text-zinc-900! shadow-lg! dark:border-white/10! dark:bg-zinc-800! dark:text-white!">
-                                <div class="text-sm font-semibold">{{ $day['label'] }}</div>
+                                <div class="text-sm font-semibold">{{ $day['label'] }}@if ($isToday) <span class="font-normal text-zinc-500 dark:text-zinc-400">· {{ __('Today') }}</span>@endif</div>
                                 <div class="mt-1 flex items-center gap-2 text-sm font-normal">
                                     <span class="size-3 rounded-sm bg-blue-900 dark:bg-blue-600"></span>
                                     <span>{{ __('Tickets opened') }}</span>

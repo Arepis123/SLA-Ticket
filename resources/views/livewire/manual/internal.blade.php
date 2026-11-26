@@ -13,7 +13,7 @@
                 <li><flux:text inline variant="strong">{{ __('At risk') }}</flux:text> — {{ __('open tickets that have used :pct% or more of their time.', ['pct' => config('sla.at_risk_threshold')]) }}</li>
                 <li><flux:text inline variant="strong">{{ __('SLA compliance (30d)') }}</flux:text> — {{ __('the share of tickets resolved in the last 30 days that were fixed on time.') }}</li>
                 <li><flux:text inline variant="strong">{{ __('Needs attention') }}</flux:text> — {{ __('breached tickets first, then the ones closest to their deadline.') }}</li>
-                <li><flux:text inline variant="strong">{{ __('Tickets opened — last 12 weeks') }}</flux:text> — {{ __('a calendar with one square per day. Columns are calendar weeks (W45 and so on) and rows are days of the week. The lightest square means no tickets, and the darker shades mean 1, 2, and 3 or more. Point at a square to see the date and the exact count.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Tickets opened — last 12 weeks') }}</flux:text> — {{ __('a calendar with one square per day. Columns are calendar weeks (W45 and so on) and rows are days of the week. The lightest square means no tickets, and the darker shades mean 1, 2, and 3 or more. The square with a dot is today. Point at a square to see the date and the exact count.') }}</li>
             </x-manual.steps>
             <flux:text>{{ __('Click any number to open the matching ticket list. The dashboard refreshes itself every minute. Merged duplicates are not counted in SLA compliance, so one issue only counts once.') }}</flux:text>
         </flux:accordion.item>
