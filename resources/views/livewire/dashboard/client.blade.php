@@ -138,6 +138,10 @@
         @endif
     </flux:card>
 
+    @if (auth()->user()->isClientAdmin())
+        <x-ticket-heatmap :weeks="$this->heatmap" />
+    @endif
+
     @if ($showTour)
         <x-tour :steps="[
             [

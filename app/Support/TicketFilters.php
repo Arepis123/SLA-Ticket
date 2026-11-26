@@ -6,6 +6,7 @@ use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -27,6 +28,8 @@ final readonly class TicketFilters
         public string $sort = 'created_at',
         public string $direction = 'desc',
         public string $company = '',
+        public string $from = '',
+        public string $to = '',
     ) {}
 
     /**
@@ -50,6 +53,8 @@ final readonly class TicketFilters
                 'none' => $query->whereNull('assignee_id'),
                 default => $query->where('assignee_id', (int) $this->assignee),
             })
+            ->when(self::date($this->from), fn (Builder $query, CarbonImmutable $from) => $query->where('created_at', '>=', $from->startOfDay()))
+            ->when(self::date($this->to), fn (Builder $query, CarbonImmutable $to) => $query->where('created_at', '<=', $to->endOfDay()))
             ->when($this->sla === 'breached', fn (Builder $query) => $query->whereNull('merged_into_id')->where(fn (Builder $query) => $query
                 ->whereNotNull('resolution_breached_at')
                 ->orWhereNotNull('response_breached_at')
@@ -67,5 +72,19 @@ final readonly class TicketFilters
                 $this->direction === 'asc' ? 'asc' : 'desc',
             ))
             ->orderByDesc('id');
+    }
+
+    /**
+     * A Y-m-d date from the query string, or null when it is empty or not a real date.
+     */
+    public static function date(string $value): ?CarbonImmutable
+    {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return null;
+        }
+
+        $date = CarbonImmutable::createFromFormat('!Y-m-d', $value);
+
+        return $date && $date->format('Y-m-d') === $value ? $date : null;
     }
 }

@@ -24,4 +24,25 @@ class DashboardTest extends TestCase
         $response = $this->get(route('dashboard'));
         $response->assertOk();
     }
+
+    public function test_staff_see_the_ticket_heatmap(): void
+    {
+        $this->actingAs(User::factory()->internal()->create());
+
+        $this->get(route('dashboard'))->assertOk()->assertSee('Tickets opened — last 12 weeks');
+    }
+
+    public function test_client_admins_see_the_ticket_heatmap(): void
+    {
+        $this->actingAs(User::factory()->clientAdmin()->create());
+
+        $this->get(route('dashboard'))->assertOk()->assertSee('Tickets opened — last 12 weeks');
+    }
+
+    public function test_regular_clients_do_not_see_the_ticket_heatmap(): void
+    {
+        $this->actingAs(User::factory()->client()->create());
+
+        $this->get(route('dashboard'))->assertOk()->assertDontSee('Tickets opened — last 12 weeks');
+    }
 }

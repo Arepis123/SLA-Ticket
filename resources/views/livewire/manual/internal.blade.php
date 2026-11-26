@@ -13,16 +13,19 @@
                 <li><flux:text inline variant="strong">{{ __('At risk') }}</flux:text> — {{ __('open tickets that have used :pct% or more of their time.', ['pct' => config('sla.at_risk_threshold')]) }}</li>
                 <li><flux:text inline variant="strong">{{ __('SLA compliance (30d)') }}</flux:text> — {{ __('the share of tickets resolved in the last 30 days that were fixed on time.') }}</li>
                 <li><flux:text inline variant="strong">{{ __('Needs attention') }}</flux:text> — {{ __('breached tickets first, then the ones closest to their deadline.') }}</li>
+                <li><flux:text inline variant="strong">{{ __('Tickets opened — last 12 weeks') }}</flux:text> — {{ __('a calendar with one square per day. Columns are calendar weeks (W45 and so on) and rows are days of the week. The lightest square means no tickets, and the darker shades mean 1, 2, and 3 or more. Point at a square to see the date and the exact count.') }}</li>
             </x-manual.steps>
             <flux:text>{{ __('Click any number to open the matching ticket list. The dashboard refreshes itself every minute. Merged duplicates are not counted in SLA compliance, so one issue only counts once.') }}</flux:text>
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('3. Finding tickets')">
-            <flux:text>{{ __('The Tickets page opens on your own queue: the Assignee filter starts on "Assigned to me". Choose "Anyone" or click "Clear filters" to see every ticket. Useful filters:') }}</flux:text>
+            <flux:text>{{ __('The Tickets page opens on your own queue: the Assignee filter starts on "Assigned to me". Choose "Anyone" or click "Clear filters" to see every ticket.') }}</flux:text>
+            <flux:text class="mt-2">{{ __('The search box and the status list sit at the top. Every other filter is under the "Filters" button, which shows how many of them are on. Each one in use also appears as a tag under the search box; click its × to remove just that filter. Useful filters:') }}</flux:text>
             <x-manual.steps bullets>
                 <li>{{ __('Assignee → "Assigned to me" for your own queue, "Unassigned" to find tickets nobody has picked up, or a colleague\'s name to see theirs.') }}</li>
                 <li>{{ __('Status → "All unresolved" to hide finished tickets.') }}</li>
                 <li>{{ __('SLA → "Breached" or "At risk" to see what is urgent.') }}</li>
+                <li>{{ __('Submitted → pick the first and last day on the calendar to see tickets reported in that range, both days included. Leave it empty for any date.') }}</li>
                 <li>{{ __('Click the SLA column heading to sort by deadline.') }}</li>
                 <li>{{ __('Saved views → set up the filters you use often, click "Save view" above the filters and give it a name. Your views appear as buttons there; click one to apply it, or its × to delete it. A view remembers the assignee as well, so a view saved with "Anyone" opens on every ticket. Views are private to you, and you can keep up to 20.') }}</li>
             </x-manual.steps>

@@ -170,4 +170,48 @@ class DashboardMetrics
             ];
         })->all();
     }
+
+    /**
+     * Tickets opened per day as a calendar grid: one column per week (Monday first),
+     * oldest week first. Days after today are null. Level is the ticket count, capped at 3 (3 or more tickets = 3).
+     *
+     * @return array<int, array{start: string, week: int, month: string, days: array<int, array{date: string, label: string, count: int, level: int}|null>}>
+     */
+    public function heatmap(int $weeks = 12): array
+    {
+        $today = now()->startOfDay();
+        $start = $today->copy()->startOfWeek()->subWeeks($weeks - 1);
+
+        $counts = Ticket::query()
+            ->visibleTo($this->user)
+            ->where('created_at', '>=', $start)
+            ->pluck('created_at')
+            ->countBy(fn ($date) => $date->format('Y-m-d'));
+
+        return collect(range(0, $weeks - 1))->map(function (int $week) use ($start, $today, $counts) {
+            $weekStart = $start->copy()->addWeeks($week);
+
+            return [
+                'start' => $weekStart->format('Y-m-d'),
+                'week' => $weekStart->isoWeek(),
+                'month' => $weekStart->format('M'),
+                'days' => collect(range(0, 6))->map(function (int $offset) use ($weekStart, $today, $counts) {
+                    $day = $weekStart->copy()->addDays($offset);
+
+                    if ($day->gt($today)) {
+                        return null;
+                    }
+
+                    $count = $counts[$day->format('Y-m-d')] ?? 0;
+
+                    return [
+                        'date' => $day->format('Y-m-d'),
+                        'label' => $day->format('D, d M Y'),
+                        'count' => $count,
+                        'level' => min($count, 3),
+                    ];
+                })->all(),
+            ];
+        })->all();
+    }
 }

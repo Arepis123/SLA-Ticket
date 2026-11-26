@@ -33,6 +33,7 @@
                 <li>{{ __('A green notice when a fix is ready for you to check.') }}</li>
                 <li>{{ __('Counts of your open tickets, tickets waiting for your reply, and tickets fixed in the last 30 days.') }}</li>
                 <li>{{ __('Your most recently updated tickets. Click a ticket title to open it.') }}</li>
+                <li>{{ __('Client admins only: "Tickets opened — last 12 weeks", a calendar with one square per day for your whole company. Columns are weeks (numbered as in the calendar, for example W45) and rows are days of the week. The lightest square means no tickets, and the darker shades mean 1, 2, and 3 or more tickets. Point at a square to see the date and the exact count.') }}</li>
             </x-manual.steps>
         </flux:accordion.item>
 
@@ -55,7 +56,8 @@
         </flux:accordion.item>
 
         <flux:accordion.item :heading="__('4. Following your tickets')">
-            <flux:text>{{ __('"My Tickets" lists the tickets you reported. If you are your company\'s client admin, the page is called "Company Tickets" and lists every ticket reported by anyone in your company, with the reporter\'s name. Use the search box and the filters at the top to narrow the list, and click a column heading to sort. To keep a set of filters, click "Save view" and give it a name.') }}</flux:text>
+            <flux:text>{{ __('"My Tickets" lists the tickets you reported. If you are your company\'s client admin, the page is called "Company Tickets" and lists every ticket reported by anyone in your company, with the reporter\'s name. Use the search box and the status list at the top to narrow the list, and click a column heading to sort.') }}</flux:text>
+            <flux:text class="mt-2">{{ __('Click "Filters" for more: severity, system, SLA state and the date submitted. For the date, pick the first and last day of the range on the calendar. The button shows how many of these filters are on, and each one appears as a tag under the search box. Click the × on a tag to remove just that filter, or "Clear filters" to remove them all. To keep a set of filters, click "Save view" and give it a name.') }}</flux:text>
             <flux:text class="mt-2">{{ __('If someone else already reported the same problem, our team may merge your ticket into theirs. You will get an email, your ticket closes with a link to the one we are working on, and that ticket appears in your list too. You will receive its updates and can reply on it.') }}</flux:text>
 
             <flux:heading class="mt-4 mb-2">{{ __('Ticket statuses') }}</flux:heading>

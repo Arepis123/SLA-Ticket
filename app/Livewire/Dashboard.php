@@ -123,6 +123,17 @@ class Dashboard extends Component
     }
 
     /**
+     * Tickets opened per day over the last 12 weeks, as a calendar heatmap.
+     *
+     * @return array<int, array{start: string, week: int, month: string, days: array<int, array{date: string, label: string, count: int, level: int}|null>}>
+     */
+    #[Computed]
+    public function heatmap(): array
+    {
+        return $this->metrics->heatmap();
+    }
+
+    /**
      * Recent tickets for the client view.
      *
      * @return Collection<int, Ticket>

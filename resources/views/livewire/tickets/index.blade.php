@@ -39,53 +39,86 @@
         </div>
     @endif
 
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" data-tour="ticket-filters">
-        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Search ref or title…')" clearable class="xl:col-span-2" />
+    <div class="flex flex-col gap-3" data-tour="ticket-filters">
+        <div class="flex flex-wrap items-center gap-2">
+            <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Search ref or title…')" clearable class="min-w-0 basis-full sm:max-w-sm sm:basis-auto sm:flex-1" />
 
-        <flux:select variant="listbox" wire:model.live="status">
-            <flux:select.option value="">{{ __('All statuses') }}</flux:select.option>
-            <flux:select.option value="unresolved">{{ __('All unresolved') }}</flux:select.option>
-            @foreach (\App\Enums\TicketStatus::cases() as $option)
-                <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
-            @endforeach
-        </flux:select>
+            <div class="min-w-0 flex-1 sm:w-52 sm:flex-none">
+                <flux:select variant="listbox" wire:model.live="status">
+                    <flux:select.option value="">{{ __('All statuses') }}</flux:select.option>
+                    <flux:select.option value="unresolved">{{ __('All unresolved') }}</flux:select.option>
+                    @foreach (\App\Enums\TicketStatus::cases() as $option)
+                        <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
 
-        <flux:select variant="listbox" wire:model.live="priority">
-            <flux:select.option value="">{{ __('All priorities') }}</flux:select.option>
-            @foreach (\App\Enums\TicketPriority::cases() as $option)
-                <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
-            @endforeach
-        </flux:select>
+            <flux:dropdown position="bottom" align="end">
+                <flux:button icon="adjustments-horizontal">
+                    {{ __('Filters') }}
+                    @if (count($this->panelFilters))
+                        <flux:badge size="sm" color="blue" class="ms-1 tabular-nums">{{ count($this->panelFilters) }}</flux:badge>
+                    @endif
+                </flux:button>
 
-        <flux:select variant="listbox" searchable wire:model.live="project">
-            <flux:select.option value="">{{ __('All systems') }}</flux:select.option>
-            @foreach ($this->projects as $option)
-                <flux:select.option :value="$option->id">{{ $option->name }}{{ auth()->user()->isStaff() ? ' — '.$option->company->name : '' }}</flux:select.option>
-            @endforeach
-        </flux:select>
+                <flux:popover class="flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-4 p-4">
+                    <flux:select variant="listbox" wire:model.live="priority" :label="__('Priority')">
+                        <flux:select.option value="">{{ __('All priorities') }}</flux:select.option>
+                        @foreach (\App\Enums\TicketPriority::cases() as $option)
+                            <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
 
-        <flux:select variant="listbox" wire:model.live="sla">
-            <flux:select.option value="">{{ __('Any SLA state') }}</flux:select.option>
-            <flux:select.option value="breached">{{ __('Breached') }}</flux:select.option>
-            <flux:select.option value="at_risk">{{ __('At risk') }}</flux:select.option>
-        </flux:select>
+                    <flux:select variant="listbox" searchable wire:model.live="project" :label="__('System')">
+                        <flux:select.option value="">{{ __('All systems') }}</flux:select.option>
+                        @foreach ($this->projects as $option)
+                            <flux:select.option :value="$option->id">{{ $option->name }}{{ auth()->user()->isStaff() ? ' — '.$option->company->name : '' }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
 
-        @can('staff')
-            <flux:select variant="listbox" searchable wire:model.live="assignee">
-                <flux:select.option value="">{{ __('Anyone') }}</flux:select.option>
-                @if (auth()->user()->isInternal())
-                    <flux:select.option value="me">{{ __('Assigned to me') }}</flux:select.option>
-                @endif
-                <flux:select.option value="none">{{ __('Unassigned') }}</flux:select.option>
-                @foreach ($this->staff as $option)
-                    <flux:select.option :value="$option->id">{{ $option->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
-        @endcan
+                    <flux:select variant="listbox" wire:model.live="sla" :label="__('SLA')">
+                        <flux:select.option value="">{{ __('Any SLA state') }}</flux:select.option>
+                        <flux:select.option value="breached">{{ __('Breached') }}</flux:select.option>
+                        <flux:select.option value="at_risk">{{ __('At risk') }}</flux:select.option>
+                    </flux:select>
 
-        @if ($this->hasFilters)
-            <div class="flex items-center">
+                    @can('staff')
+                        <flux:select variant="listbox" searchable wire:model.live="assignee" :label="__('Assignee')">
+                            <flux:select.option value="">{{ __('Anyone') }}</flux:select.option>
+                            @if (auth()->user()->isInternal())
+                                <flux:select.option value="me">{{ __('Assigned to me') }}</flux:select.option>
+                            @endif
+                            <flux:select.option value="none">{{ __('Unassigned') }}</flux:select.option>
+                            @foreach ($this->staff as $option)
+                                <flux:select.option :value="$option->id">{{ $option->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    @endcan
+
+                    <flux:date-picker mode="range" wire:model.live="submitted" max="today">
+                        <x-slot name="trigger">
+                            <div class="grid grid-cols-2 gap-2">
+                                <flux:date-picker.input variant="custom" :label="__('Submitted from')" />
+                                <flux:date-picker.input variant="custom" :label="__('To')" />
+                            </div>
+                        </x-slot>
+                    </flux:date-picker>
+                </flux:popover>
+            </flux:dropdown>
+
+            @if ($this->hasFilters)
                 <flux:button variant="ghost" size="sm" icon="x-mark" wire:click="resetFilters">{{ __('Clear filters') }}</flux:button>
+            @endif
+        </div>
+
+        @if (count($this->panelFilters))
+            <div class="flex flex-wrap items-center gap-2">
+                @foreach ($this->panelFilters as $filter => $label)
+                    <flux:badge size="sm" wire:key="chip-{{ $filter }}">
+                        {{ $label }}
+                        <flux:badge.close wire:click="clearFilter('{{ $filter }}')" :aria-label="__('Remove filter')" />
+                    </flux:badge>
+                @endforeach
             </div>
         @endif
     </div>

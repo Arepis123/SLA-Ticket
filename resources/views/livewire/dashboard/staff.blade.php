@@ -155,32 +155,7 @@
         </section>
 
         <section @class(['order-first' => $this->unresolved->isEmpty()])>
-            <flux:card>
-                <flux:heading size="lg">{{ __('Tickets opened — last 14 days') }}</flux:heading>
-    
-                <flux:chart :value="$this->trend" class="mt-6 w-full aspect-[4/1] min-h-48">
-                    <flux:chart.svg>
-                        <flux:chart.bar field="count" class="text-sky-500 dark:text-sky-400" radius="4 0" width="60%" />
-    
-                        <flux:chart.axis axis="x" field="label" scale="categorical">
-                            <flux:chart.axis.line />
-                            <flux:chart.axis.tick />
-                        </flux:chart.axis>
-    
-                        <flux:chart.axis axis="y" tick-start="0">
-                            <flux:chart.axis.grid />
-                            <flux:chart.axis.tick />
-                        </flux:chart.axis>
-    
-                        <flux:chart.cursor />
-                    </flux:chart.svg>
-    
-                    <flux:chart.tooltip>
-                        <flux:chart.tooltip.heading field="label" />
-                        <flux:chart.tooltip.value field="count" :label="__('Tickets opened')" />
-                    </flux:chart.tooltip>
-                </flux:chart>
-            </flux:card>
+            <x-ticket-heatmap :weeks="$this->heatmap" />
         </section>
     </div>
 </div>

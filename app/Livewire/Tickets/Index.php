@@ -47,6 +47,22 @@ class Index extends Component
     #[Url(except: '')]
     public string $sla = '';
 
+    /** Submitted on or after this date (Y-m-d). */
+    #[Url(except: '')]
+    public string $from = '';
+
+    /** Submitted on or before this date (Y-m-d). */
+    #[Url(except: '')]
+    public string $to = '';
+
+    /**
+     * The Submitted date-range picker's value. It mirrors $from/$to, which are what
+     * the URL and saved views keep.
+     *
+     * @var array{start: ?string, end: ?string}
+     */
+    public array $submitted = ['start' => null, 'end' => null];
+
     #[Url(except: 'created_at')]
     public string $sort = 'created_at';
 
@@ -60,7 +76,7 @@ class Index extends Component
      */
     protected const VIEW_DEFAULTS = [
         'search' => '', 'status' => '', 'priority' => '', 'project' => '',
-        'assignee' => '', 'sla' => '', 'sort' => 'created_at', 'direction' => 'desc',
+        'assignee' => '', 'sla' => '', 'from' => '', 'to' => '', 'sort' => 'created_at', 'direction' => 'desc',
     ];
 
     protected const MAX_SAVED_VIEWS = 20;
@@ -80,6 +96,8 @@ class Index extends Component
      */
     public function mount(): void
     {
+        $this->syncSubmitted();
+
         if (! Auth::user()->isInternal()) {
             if ($this->assignee === 'me') {
                 $this->assignee = '';
@@ -95,7 +113,15 @@ class Index extends Component
 
     public function updated(string $property): void
     {
-        if (in_array($property, ['search', 'status', 'priority', 'project', 'assignee', 'sla'], true)) {
+        if (str_starts_with($property, 'submitted')) {
+            $this->from = TicketFilters::date((string) ($this->submitted['start'] ?? ''))?->format('Y-m-d') ?? '';
+            $this->to = TicketFilters::date((string) ($this->submitted['end'] ?? ''))?->format('Y-m-d') ?? '';
+            $this->resetPage();
+
+            return;
+        }
+
+        if (in_array($property, ['search', 'status', 'priority', 'project', 'assignee', 'sla', 'from', 'to'], true)) {
             $this->resetPage();
         }
     }
@@ -112,8 +138,72 @@ class Index extends Component
 
     public function resetFilters(): void
     {
-        $this->reset('search', 'status', 'priority', 'project', 'assignee', 'sla');
+        $this->reset('search', 'status', 'priority', 'project', 'assignee', 'sla', 'from', 'to');
+        $this->syncSubmitted();
         $this->resetPage();
+    }
+
+    protected function syncSubmitted(): void
+    {
+        $this->submitted = ['start' => $this->from ?: null, 'end' => $this->to ?: null];
+    }
+
+    /**
+     * Remove one filter from the Filters panel. "submitted" clears both dates.
+     */
+    public function clearFilter(string $filter): void
+    {
+        match ($filter) {
+            'priority', 'project', 'assignee', 'sla' => $this->reset($filter),
+            'submitted' => $this->reset('from', 'to'),
+            default => null,
+        };
+
+        $this->syncSubmitted();
+
+        $this->resetPage();
+    }
+
+    /**
+     * The filters set in the Filters panel, as removable chips keyed by filter.
+     *
+     * @return array<string, string>
+     */
+    #[Computed]
+    public function panelFilters(): array
+    {
+        $user = Auth::user();
+
+        return array_filter([
+            'priority' => ($label = TicketPriority::tryFrom($this->priority)?->label()) ? __('Priority: :value', ['value' => $label]) : null,
+            'project' => $this->project !== '' && ($name = $this->projects->firstWhere('id', (int) $this->project)?->name)
+                ? __('System: :value', ['value' => $name])
+                : null,
+            'sla' => match ($this->sla) {
+                'breached' => __('SLA: Breached'),
+                'at_risk' => __('SLA: At risk'),
+                default => null,
+            },
+            'assignee' => ! $user->isStaff() || $this->assignee === '' ? null : __('Assignee: :value', ['value' => match ($this->assignee) {
+                'me' => __('Me'),
+                'none' => __('Unassigned'),
+                default => $this->staff->firstWhere('id', (int) $this->assignee)?->name ?? '—',
+            }]),
+            'submitted' => $this->submittedLabel(),
+        ]);
+    }
+
+    protected function submittedLabel(): ?string
+    {
+        $from = TicketFilters::date($this->from)?->format('d M Y');
+        $to = TicketFilters::date($this->to)?->format('d M Y');
+
+        return match (true) {
+            $from && $to => __('Submitted: :from – :to', ['from' => $from, 'to' => $to]),
+            (bool) $from => __('Submitted: from :date', ['date' => $from]),
+            (bool) $to => __('Submitted: until :date', ['date' => $to]),
+            default => null,
+        };
     }
 
     /**
@@ -170,6 +260,7 @@ class Index extends Component
                 'at_risk' => __('SLA at risk'),
                 default => null,
             },
+            $this->submittedLabel(),
             ! $user->isStaff() ? null : match ($this->assignee) {
                 '' => __('Anyone'),
                 'me' => __('Assigned to me'),
@@ -242,7 +333,8 @@ class Index extends Component
     public function hasFilters(): bool
     {
         return $this->search !== '' || $this->status !== '' || $this->priority !== ''
-            || $this->project !== '' || $this->assignee !== '' || $this->sla !== '';
+            || $this->project !== '' || $this->assignee !== '' || $this->sla !== ''
+            || $this->from !== '' || $this->to !== '';
     }
 
     /**
@@ -260,6 +352,8 @@ class Index extends Component
             project: $this->project,
             assignee: $this->assignee,
             sla: $this->sla,
+            from: $this->from,
+            to: $this->to,
             sort: $this->sort,
             direction: $this->direction,
         );

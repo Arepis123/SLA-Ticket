@@ -116,7 +116,7 @@ class DemoSeeder extends Seeder
 
         $now = CarbonImmutable::now();
 
-        foreach (range(1, 28) as $i) {
+        foreach (range(1, 90) as $i) {
             $client = $clients->random();
             $project = Project::query()->where('company_id', $client->company_id)->inRandomOrder()->first();
             $issue = $this->issues[array_rand($this->issues)];
@@ -127,11 +127,11 @@ class DemoSeeder extends Seeder
 
             // The last tickets are recent and stop part-way so there is live work to monitor:
             // 0 = still open, 1 = acknowledged, 2 = in progress, 3 = waiting on client, 4 = run to completion.
-            $live = $i > 18;
+            $live = $i > 78;
             $stage = $live ? random_int(0, 3) : 4;
             $at = $live
                 ? $now->subMinutes(random_int(20, 4 * 24 * 60))
-                : $now->subMinutes(random_int(5 * 24 * 60, 45 * 24 * 60));
+                : $this->pastOpenedAt($now);
             $step = function (int $minutes) use (&$at, $now): bool {
                 $at = $at->addMinutes($minutes);
 
@@ -223,5 +223,18 @@ class DemoSeeder extends Seeder
         CarbonImmutable::setTestNow();
 
         $manager->checkSla();
+    }
+
+    /**
+     * A time within the last 12 weeks (excluding the most recent 5 days), during office hours.
+     * Weekends are rare so the dashboard heatmap shows a realistic weekly pattern.
+     */
+    protected function pastOpenedAt(CarbonImmutable $now): CarbonImmutable
+    {
+        do {
+            $day = $now->subDays(random_int(5, 83))->startOfDay();
+        } while ($day->isWeekend() && fake()->boolean(85));
+
+        return $day->setTime(random_int(8, 17), random_int(0, 59));
     }
 }
